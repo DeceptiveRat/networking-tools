@@ -1,0 +1,8 @@
+*.swp
+*.txt
+*.o
+*.log
+*.py
+decode_sniff
+packet_sniffer
+compile.sh
