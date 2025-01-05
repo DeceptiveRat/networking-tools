@@ -108,20 +108,31 @@ struct dns_query_section
 #define DNS_CLASS_IN 1
 };
 
-// cast end of domain name
 struct dns_response_section
 {
 	char* dns_domain_name;
 
 	unsigned short dns_type;
-
-	// UDP payload size of OPT records
 	unsigned short dns_class;
-
-	// Extended RCODE and flags for OPT record
 	unsigned int dns_TTL;
 	unsigned short dns_data_length;
 	unsigned char* dns_resource_data;
+	bool is_opt_record; 
+};
+
+struct dns_opt_record
+{
+	// TODO: change to 8 bytes for x86_64, 4 bytes for x86
+	int dns_opt_name;
+	int padding;
+
+	unsigned short dns_type;
+	unsigned short dns_udp_payload_size;
+	unsigned char dns_rcode;
+	unsigned char dns_flags[3];
+	unsigned short dns_data_length;
+	unsigned char* dns_option_data;
+	bool is_opt_record; 
 };
 
 struct dns_query
@@ -170,9 +181,7 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 char udp_checksum_matches(const unsigned char *header_start);
 char tcp_checksum_matches(const unsigned char *header_start);
 
-// print functions
+// debugging functions
+void dns_packet_debug(unsigned char *user_args, const unsigned char *packet, const int packet_length);
 
 // ------------------------------------------------------- #variables -------------------------------------------------------------- //
-
-// remove
-void print_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *cap_header, const unsigned char *packet);

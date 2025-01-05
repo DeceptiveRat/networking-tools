@@ -369,6 +369,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 
 	// convert network byte order to host byte order
 	query_header.dns_id = ntohs(query_header.dns_id);
+	query_header.dns_flags = ntohs(query_header.dns_flags);
 	query_header.dns_question_count = ntohs(query_header.dns_question_count);
 	query_header.dns_answer_count = ntohs(query_header.dns_answer_count);
 	query_header.dns_authority_count = ntohs(query_header.dns_authority_count);
@@ -422,14 +423,13 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			add_new_pointer(head, NULL, domain_names[j]);
 
 		// get other information
-		query_offset++;
 		word = *(unsigned short*)(query_start + query_offset);
-		queries[j].dns_type = word;
+		queries[j].dns_type = ntohs(word);
 		query_offset+=2;
 		word = *(unsigned short*)(query_start+query_offset);
-		queries[j].dns_class = word;
-		queries[j].dns_domain_name = domain_names[j];
+		queries[j].dns_class = ntohs(word);
 		query_offset+=2;
+		queries[j].dns_domain_name = domain_names[j];
 	}
 	(*dns_query_pointer)->dns_query_queries = queries;
 
@@ -466,11 +466,12 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 	for(int additional_record_index;additional_record_index<additional_count;additional_record_index++)
 	{
 		byte = *(query_start + query_offset);
+		query_offset++;
 
 		// OPT record
 		if(byte == 0x00)
 		{
-			additional_records[additional_record_index].dns_type = *(unsigned short*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_type = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
 			if(additional_records[additional_record_index].dns_type != 41)
 			{
@@ -478,11 +479,11 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 				return false;
 			}
 			
-			additional_records[additional_record_index].dns_class = *(unsigned short*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_class = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
-			additional_records[additional_record_index].dns_TTL = *(unsigned int*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_TTL = ntohl(*(unsigned int*)(query_start + query_offset));
 			query_offset+=4;
-			int dataLength = *(unsigned short*)(query_start + query_offset);
+			short dataLength = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
 			additional_records[additional_record_index].dns_data_length = dataLength;
 			if(dataLength != 0)
@@ -499,6 +500,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			}
 			else
 				additional_records[additional_record_index].dns_resource_data = NULL;
+			additional_records[additional_record_index].is_opt_record = true;
 		}
 		// normal record
 		else
@@ -513,13 +515,13 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 				add_new_pointer(head, NULL, domain_names_additional[additional_record_index]);
 
 			additional_records[additional_record_index].dns_domain_name = domain_names_additional[additional_record_index];
-			additional_records[additional_record_index].dns_type = *(unsigned short*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_type = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
-			additional_records[additional_record_index].dns_class = *(unsigned short*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_class = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
-			additional_records[additional_record_index].dns_TTL = *(unsigned int*)(query_start + query_offset);
+			additional_records[additional_record_index].dns_TTL = ntohl(*(unsigned int*)(query_start + query_offset));
 			query_offset+=4;
-			int dataLength = *(unsigned short*)(query_start + query_offset);
+			short dataLength = ntohs(*(unsigned short*)(query_start + query_offset));
 			query_offset+=2;
 			additional_records[additional_record_index].dns_data_length = dataLength;
 			if(dataLength != 0)
@@ -536,6 +538,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			}
 			else
 				additional_records[additional_record_index].dns_resource_data = NULL;
+			additional_records[additional_record_index].is_opt_record = false;
 		}
 	}
 
@@ -605,125 +608,135 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 	return name_pointer;
 }
 
-// ----------------------------------------- remove after project is graded ----------------------------------------------
-void print_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *cap_header, const unsigned char *packet)
+void dns_packet_debug(unsigned char *user_args, const unsigned char *packet, const int packet_length)
 {
 	FILE* outputFilePtr = (FILE*)user_args;
 	int tcp_header_length, total_header_size, pkt_data_len;
 	unsigned char *pkt_data;
+	bool isUDP;
 
-	fprintf(outputFilePtr, "==== Got a %d byte packet ====\n", cap_header->len);
-
-	char protocol = 0;
-	protocol = ((struct ip_hdr*)(packet + ETHER_HDR_LEN))->ip_type;
-
-	if(protocol == IP_TYPE_UDP)
-	{
-		if(udp_checksum_matches(packet) != 1)
-		{
-			fprintf(outputFilePtr, "checksum doesn't match\n");
-			fprintf(outputFilePtr, "UDP packet dropped.\n");
-			return;
-		}
-	}
-
-	else if(protocol == IP_TYPE_TCP)
-	{
-		if(tcp_checksum_matches(packet) != 1)
-		{
-			fprintf(outputFilePtr, "checksum doesn't match\n");
-			fprintf(outputFilePtr, "TCP packet dropped.\n");
-			return;
-		}
-	}
-
-	// --------------------------------------- initialize allocated pointer list ------------------------------------
-	struct allocated_pointers* head = NULL;
-	struct allocated_pointers* tail = NULL;
-	head = (struct allocated_pointers*)malloc(sizeof(struct allocated_pointers));
-
-	if(head == NULL)
-	{
-		printf("Error allocating memory: head\n");
-		return;
-	}
-
-	head->pointer = NULL;
-	head->next_pointer = NULL;
-	tail = head;
-	// ---------------------------------------------------------------------------------------------------------------
+	fprintf(outputFilePtr, "==== Got a %d byte packet ====\n", packet_length);
 
 	struct ether_hdr* ethernet_header = NULL;
 	ethernet_header = (struct ether_hdr*)malloc(ETHER_HDR_LEN);
 
 	if(ethernet_header == NULL)
-	{
-		printf("Error allocating memory: ethernet_header\n");
-		exit(-1);
-	}
+		fatal("allocating memory: ethernet_header", "analyze_caught_packet", outputFilePtr);
 
-	*ethernet_header = decode_ethernet(packet, outputFilePtr);
+	// verify if it is ethernet later
+	get_ethernet_header(packet, ethernet_header);
 	total_header_size = ETHER_HDR_LEN;
 
 	struct ip_hdr* ip_header = NULL;
 	ip_header = (struct ip_hdr*)malloc(IP_HDR_LEN);
 
 	if(ip_header == NULL)
-	{
-		printf("Error allocating memory: ip_header\n");
-		exit(-1);
-	}
+		fatal("allocating memory: ip_header", "analyze_caught_packet", outputFilePtr);
 
-	*ip_header = decode_ip(packet + total_header_size, outputFilePtr);
+	// verify if it is IP later
+	get_ip_header(packet + total_header_size, ip_header);
 	total_header_size += IP_HDR_LEN;
+
+	struct tcp_hdr* tcp_header = NULL;
+	struct udp_hdr* udp_header = NULL;
 
 	if(ip_header->ip_type == IP_TYPE_TCP)
 	{
-		struct tcp_hdr* tcp_header = NULL;
+		isUDP = false;
+		if(tcp_checksum_matches(packet) != 1)
+		{
+			fprintf(outputFilePtr, "checksum doesn't match\n");
+			fprintf(outputFilePtr, "TCP packet dropped.\n");
+			return;
+		}
+
 		tcp_header = (struct tcp_hdr*)malloc(TCP_HDR_LEN);
 
 		if(tcp_header == NULL)
-		{
-			printf("Error allocating memory: tcp_header\n");
-			exit(-1);
-		}
+			fatal("allocating memory: tcp_header", "analyze_caught_packet", outputFilePtr);
 
-		*tcp_header = decode_tcp(packet + total_header_size, outputFilePtr, &tcp_header_length);
+		// verify if it is TCP later
+		get_tcp_header(packet + total_header_size, tcp_header, &tcp_header_length);
 		total_header_size += tcp_header_length;
+		isUDP = false;
+		printf("TCP packet dropped\n");
+		fprintf(outputFilePtr, "TCP packet dropped\n");
+		return;
 	}
 
 	else if(ip_header->ip_type == IP_TYPE_UDP)
 	{
-		struct udp_hdr* udp_header = NULL;
+		isUDP = true;
+		if(udp_checksum_matches(packet) != 1)
+		{
+			fprintf(outputFilePtr, "checksum doesn't match\n");
+			fprintf(outputFilePtr, "UDP packet dropped.\n");
+			return;
+		}
+
 		udp_header = (struct udp_hdr*)malloc(UDP_HDR_LEN);
 
 		if(udp_header == NULL)
-		{
-			printf("Error allocating memory: udp_header\n");
-			exit(-1);
-		}
+			fatal("allocating memory: udp_header", "analyze_caught_packet", outputFilePtr);
 
-		*udp_header = decode_udp(packet + total_header_size, outputFilePtr);
+		// verify if it is UDP later
+		get_udp_header(packet + total_header_size, udp_header);
 		total_header_size += UDP_HDR_LEN;
 	}
 
 	else
 	{
 		fprintf(outputFilePtr, "unknown type\n");
+		// dump_to_file(packet, packet_length, outputFilePtr);
 	}
 
-	pkt_data = (unsigned char *)packet + total_header_size;
-	pkt_data_len = cap_header->len - total_header_size;
-
-	if(pkt_data_len > 0)
-	{
-		fprintf(outputFilePtr, "\t\t\t%u bytes of packet data\n", pkt_data_len);
-		dump_to_file(pkt_data, pkt_data_len, outputFilePtr);
-	}
-
+	pkt_data = (unsigned char *)(packet + total_header_size);
+	pkt_data_len = packet_length - total_header_size;
+	struct dns_query* query_ptr = NULL;
+	if(isUDP)
+		get_dns_query(pkt_data, &query_ptr);
 	else
-		fprintf(outputFilePtr, "\t\t\tNo Packet Data\n");
+		return;
 
-	head = NULL;
-	tail = NULL;
+	fprintf(outputFilePtr, "packet data length: %d\n", pkt_data_len);
+	fprintf(outputFilePtr, "dns id: %d\n", query_ptr->dns_query_header.dns_id);
+	fprintf(outputFilePtr, "flags: %d\n", query_ptr->dns_query_header.dns_flags);
+	fprintf(outputFilePtr, "question count: %d\n", query_ptr->dns_query_header.dns_question_count);
+	fprintf(outputFilePtr, "answer count: %d\n", query_ptr->dns_query_header.dns_answer_count);
+	fprintf(outputFilePtr, "authority count: %d\n", query_ptr->dns_query_header.dns_authority_count);
+	fprintf(outputFilePtr, "additional count: %d\n", query_ptr->dns_query_header.dns_additional_count);
+
+	for(int i = 0;i<query_ptr->dns_query_header.dns_question_count;i++)
+	{
+		fprintf(outputFilePtr, "query %d domain name: %s\n", i, query_ptr->dns_query_queries->dns_domain_name);
+		fprintf(outputFilePtr, "query %d type: %d\n", i, query_ptr->dns_query_queries->dns_type);
+		fprintf(outputFilePtr, "query %d class: %d\n", i, query_ptr->dns_query_queries->dns_class);
+	}
+
+	for(int i = 0;query_ptr->dns_query_header.dns_authority_count;i++)
+	{
+		// OPT record
+		if(query_ptr->dns_query_additional->is_opt_record == true)
+		{
+			struct dns_opt_record opt_record_format;
+			opt_record_format = *(struct dns_opt_record*)query_ptr->dns_query_additional;
+			fprintf(outputFilePtr, "addditional record %d domain name: NULL(root)\n", i);
+			fprintf(outputFilePtr, "additional record %d dns type: %d(OPT record)\n", i, opt_record_format.dns_type);
+			fprintf(outputFilePtr, "additional record %d udp payload size: %d\n", i, opt_record_format.dns_udp_payload_size);
+			fprintf(outputFilePtr, "additional record %d dns rcode: %d\n", i, opt_record_format.dns_rcode);
+			fprintf(outputFilePtr, "additional record %d dns flags: %d\n", i, *(int*)(&opt_record_format.dns_flags));
+			fprintf(outputFilePtr, "additional record %d dns data length: %d\n", i, opt_record_format.dns_data_length);
+			fprintf(outputFilePtr, "additional record %d dns data: %s\n", i, opt_record_format.dns_option_data);
+		}
+		// normal record
+		else
+		{
+			fprintf(outputFilePtr, "addditional record %d domain name: %s\n", i, query_ptr->dns_query_additional->dns_domain_name);
+			fprintf(outputFilePtr, "addditional record %d dns type: %d\n", i, query_ptr->dns_query_additional->dns_type);
+			fprintf(outputFilePtr, "addditional record %d dns class: %d\n", i, query_ptr->dns_query_additional->dns_class);
+			fprintf(outputFilePtr, "addditional record %d dns time to live: %d\n", i, query_ptr->dns_query_additional->dns_TTL);
+			fprintf(outputFilePtr, "addditional record %d dns data length: %d\n", i, query_ptr->dns_query_additional->dns_data_length);
+			fprintf(outputFilePtr, "addditional record %d dns data: %s\n", i, query_ptr->dns_query_additional->dns_resource_data);
+		}
+	}
 }

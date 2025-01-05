@@ -18,6 +18,7 @@
 #include <pcap.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "packetFunctions.h"
 #include "otherFunctions.h"
@@ -28,6 +29,7 @@ void pcap_fatal(const char *, const char *);
 
 int main()
 {
+/*
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_if_t *interface_list;
 	pcap_t *pcap_handle;
@@ -57,6 +59,17 @@ int main()
 
 	pcap_freealldevs(interface_list);
 	printf("Successfully caught all packets\n");
+*/
+	FILE* inputFilePtr;
+	inputFilePtr = fopen("dnsBytes.dat", "r");
+	if(inputFilePtr == NULL)
+		fatal("opening file", NULL, NULL);
+	
+	unsigned char dnsPacket[100];
+	fread(dnsPacket, 1, 100, inputFilePtr);
+
+	dns_packet_debug((unsigned char*)stdout, dnsPacket, 96);
+	
 	return 0;
 }
 

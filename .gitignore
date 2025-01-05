@@ -2,6 +2,7 @@
 *.txt
 *.o
 *.log
+*.dat
 *.py
 decode_sniff
 packet_sniffer
