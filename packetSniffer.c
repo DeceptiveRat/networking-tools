@@ -60,16 +60,12 @@ int main()
 	pcap_freealldevs(interface_list);
 	printf("Successfully caught all packets\n");
 */
-	FILE* inputFilePtr;
-	inputFilePtr = fopen("dnsBytes.dat", "r");
-	if(inputFilePtr == NULL)
-		fatal("opening file", NULL, NULL);
+	unsigned char* dnsPacket = NULL;
+	int packetLength;
+	packetLength = hex_stream_to_bytes("dns_query.txt", &dnsPacket);
+	debug_dns_packet((unsigned char*)stdout, dnsPacket, packetLength);
 	
-	unsigned char dnsPacket[100];
-	fread(dnsPacket, 1, 100, inputFilePtr);
-
-	dns_packet_debug((unsigned char*)stdout, dnsPacket, 96);
-	
+	free(dnsPacket);
 	return 0;
 }
 

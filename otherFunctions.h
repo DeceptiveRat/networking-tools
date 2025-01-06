@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #define ERROR_MESSAGE_SIZE 200
+#define HEX_STREAM_LENGTH 500
 
 // linked list of allocated pointers for easy deallocation
 struct allocated_pointers
@@ -39,3 +40,6 @@ void fatal(char* message, char* location, FILE* outputFilePtr);
 // pointer functions
 void free_all_pointers(struct allocated_pointers* head);
 void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers* tail, void* new_pointer);
+
+// debugging functions
+int hex_stream_to_bytes(char* fileName, unsigned char** packet);

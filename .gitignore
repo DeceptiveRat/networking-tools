@@ -4,6 +4,8 @@
 *.log
 *.dat
 *.py
+*.pcapng
 decode_sniff
 packet_sniffer
 compile.sh
+packetSniffer

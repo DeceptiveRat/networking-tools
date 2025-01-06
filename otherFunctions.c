@@ -84,7 +84,7 @@ void dump(const unsigned char* dataBuffer, const unsigned int length)
 	{
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i <= length)
+			if(printLocation + i < length)
 				printf("%02x ", dataBuffer[printLocation + i]);
 
 			else
@@ -95,7 +95,7 @@ void dump(const unsigned char* dataBuffer, const unsigned int length)
 
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i <= length)
+			if(printLocation + i < length)
 			{
 				byte = dataBuffer[printLocation + i];
 
@@ -123,11 +123,11 @@ void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FI
 	unsigned int printLocation = 0;
 	char byte;
 
-	while(printLocation <= length)
+	while(printLocation < length)
 	{
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i <= length)
+			if(printLocation + i < length)
 				fprintf(outputFilePtr, "%02x ", dataBuffer[printLocation + i]);
 
 			else
@@ -138,7 +138,7 @@ void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FI
 
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i <= length)
+			if(printLocation + i < length)
 			{
 				byte = dataBuffer[printLocation + i];
 
@@ -161,11 +161,11 @@ void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FI
 	}
 }
 
-void hex_dump_only(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr)
+void hex_stream_dump(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr)
 {
 	unsigned int printLocation = 0;
 
-	while(printLocation <= length)
+	while(printLocation < length)
 	{
 		fprintf(outputFilePtr, "%02x ", databuffer[printLocation]);
 		printLocation++;
@@ -183,8 +183,8 @@ void fatal(char *message, char *location, FILE* outputFilePtr)
 	lengthLeft -= 17;
 	strncat(error_message, message, lengthLeft);
 	lengthLeft -= strlen(message);
-	strncat(error_message, "In function: ", lengthLeft);
-	lengthLeft -= 13;
+	strncat(error_message, "\nIn function: ", lengthLeft);
+	lengthLeft -= 14;
 	strncat(error_message, location, lengthLeft);
 	lengthLeft -= strlen(location);
 
@@ -233,4 +233,35 @@ void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers*
 			tail = tail->next_pointer;
 	}
 	tail->next_pointer = new_node;
+}
+
+int hex_stream_to_bytes(char* fileName, unsigned char** packet)
+{
+	FILE* inputFilePtr = fopen(fileName, "r");
+	if(inputFilePtr == NULL)
+		fatal("converting hex stream to bytes", "hex_stream_to_bytes", NULL);
+	
+	char hex_stream[HEX_STREAM_LENGTH];
+	int stream_length = fread(hex_stream, 1, HEX_STREAM_LENGTH, inputFilePtr);
+	fclose(inputFilePtr);
+
+	hex_stream[stream_length-1] = '\0';
+	stream_length--;
+	if(stream_length%2 != 0)
+		fatal("stream length not even", "hex_stream_to_bytes", NULL);
+	char byte[3];
+	byte[2] = '\0';
+	unsigned char* bytes = (unsigned char*)malloc(stream_length/2);
+	if(bytes == NULL)
+		fatal("allocating space for bytes", "hex_stream_to_bytes", NULL);
+	for(int i = 0;i<stream_length;i+=2)
+	{
+		byte[0] = hex_stream[i];
+		byte[1] = hex_stream[i+1];
+		bytes[i/2] = (unsigned char)strtol(byte, NULL, 16);
+	}
+
+	*packet = bytes;
+
+	return stream_length/2;
 }

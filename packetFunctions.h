@@ -182,6 +182,6 @@ char udp_checksum_matches(const unsigned char *header_start);
 char tcp_checksum_matches(const unsigned char *header_start);
 
 // debugging functions
-void dns_packet_debug(unsigned char *user_args, const unsigned char *packet, const int packet_length);
+void debug_dns_packet(unsigned char *user_args, const unsigned char *packet, const int packet_length);
 
 // ------------------------------------------------------- #variables -------------------------------------------------------------- //

@@ -27,6 +27,11 @@ debug: $(EXECUTABLE)
 debugNoOpt: CFLAGS += -DDEBUG -g -O0
 debugNoOpt: $(EXECUTABLE)
 
+# Address sanitizer
+ASAN: CFLAGS+= -DDEBUG -g -fsanitize=address -O0
+ASAN: LDFLAGS+= -fsanitize=address
+ASAN:$(EXECUTABLE)
+
 # The rule to link the objects into the final executable
 $(EXECUTABLE): $(OBJECTS) $(FIXED_OBJECT)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(FIXED_OBJECT) -o $@ $(EXTRAFLAGS)
