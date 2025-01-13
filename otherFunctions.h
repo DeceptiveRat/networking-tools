@@ -35,11 +35,13 @@ void dump(const unsigned char* dataBuffer, const unsigned int length);
 void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr);
 void hex_dump_only(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr);
 
-void fatal(char* message, char* location, FILE* outputFilePtr);
+void fatal(const char* message, const char* location, FILE* outputFilePtr);
 
 // pointer functions
 void free_all_pointers(struct allocated_pointers* head);
-void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers* tail, void* new_pointer);
+void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers** tail, void* new_pointer);
+void remove_from_list(struct allocated_pointers** head, struct allocated_pointers** tail, void* remove_this);
+void remove_all_from_list(struct allocated_pointers* head);
 
 // debugging functions
 int hex_stream_to_bytes(char* fileName, unsigned char** packet);

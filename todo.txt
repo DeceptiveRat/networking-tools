@@ -1,0 +1,2 @@
+need to verify if the pointer list functions are working properly
+current pointer list implementation makes it so that the head contains no pointer. Change it 

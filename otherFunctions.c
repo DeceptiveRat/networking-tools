@@ -174,7 +174,7 @@ void hex_stream_dump(const unsigned char* databuffer, const unsigned int length,
 	fprintf(outputFilePtr, "\n");
 }
 
-void fatal(char *message, char *location, FILE* outputFilePtr)
+void fatal(const char *message, const char *location, FILE* outputFilePtr)
 {
 	char error_message[ERROR_MESSAGE_SIZE];
 	int lengthLeft = ERROR_MESSAGE_SIZE;
@@ -214,10 +214,9 @@ void free_all_pointers(struct allocated_pointers* head)
 	free(prev);
 }
 
-void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers* tail, void* new_pointer)
+void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers** tail, void* new_pointer)
 {
 	struct allocated_pointers* new_node = (struct allocated_pointers*)malloc(sizeof(struct allocated_pointers));
-
 	if(new_node == NULL)
 	{
 		free_all_pointers(head);
@@ -226,13 +225,73 @@ void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers*
 
 	new_node->pointer = new_pointer;
 	new_node->next_pointer = NULL;
+	
+	struct allocated_pointers* tail_pointer;
+	// find tail automatically if tail is NULL
 	if(tail == NULL)
 	{
-		tail = head;
-		while(tail->next_pointer != NULL)
-			tail = tail->next_pointer;
+		tail_pointer = head;
+		while(tail_pointer->next_pointer != NULL)
+			tail_pointer = tail_pointer->next_pointer;
 	}
-	tail->next_pointer = new_node;
+	else
+		tail_pointer = *tail;
+
+	tail_pointer->next_pointer = new_node;
+	if(tail != NULL)
+		*tail = new_node;
+}
+
+void remove_from_list(struct allocated_pointers** head, struct allocated_pointers** tail, void* remove_this)
+{
+	struct allocated_pointers* current;
+	struct allocated_pointers* previous;
+
+	current = *head;
+	previous = NULL;
+
+	if(current = remove_this)
+	{
+		*head = current->next_pointer;
+		if(*head == NULL)
+			*tail = NULL;
+		free(current);
+		return;
+	}
+
+	while(current != remove_this)
+	{
+		previous = current;
+		current = current->next_pointer;
+		if(current == NULL)
+			fatal("pointer to free not found in allocated pointer list", "free_pointer", NULL);
+	}
+
+	previous->next_pointer = current->next_pointer;
+	free(current);
+	if(previous->next_pointer == NULL)
+		*tail = previous;
+	return;
+}
+
+void remove_all_from_list(struct allocated_pointers* head)
+{
+	struct allocated_pointers* current;
+	struct allocated_pointers* previous;
+
+	current = head;
+	if(current->next_pointer == NULL)
+	{
+		free(current);
+		return;
+	}
+
+	while(current != NULL)
+	{
+		previous = current;
+		current = current->next_pointer;
+		free(previous);
+	}
 }
 
 int hex_stream_to_bytes(char* fileName, unsigned char** packet)

@@ -29,7 +29,6 @@ void pcap_fatal(const char *, const char *);
 
 int main()
 {
-/*
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pcap_if_t *interface_list;
 	pcap_t *pcap_handle;
@@ -59,13 +58,7 @@ int main()
 
 	pcap_freealldevs(interface_list);
 	printf("Successfully caught all packets\n");
-*/
-	unsigned char* dnsPacket = NULL;
-	int packetLength;
-	packetLength = hex_stream_to_bytes("dns_query.txt", &dnsPacket);
-	debug_dns_packet((unsigned char*)stdout, dnsPacket, packetLength);
-	
-	free(dnsPacket);
+
 	return 0;
 }
 
