@@ -14,7 +14,6 @@ struct udp_hdr
     unsigned short udp_checksum;
 };
 
-struct udp_hdr decode_udp(const unsigned char *udp_header_start, FILE* outputFilePtr);
-bool get_udp_header(const unsigned char *udp_header_start, struct udp_hdr* udp_header);
 char udp_checksum_matches(const unsigned char *header_start);
+bool get_udp_header(const unsigned char *header_start, struct udp_hdr* destination_header);
 void print_udp_header(const struct udp_hdr* udp_header, FILE* outputFilePtr);

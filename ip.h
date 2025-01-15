@@ -23,6 +23,5 @@ struct ip_hdr
 #define IP_TYPE_TCP 6
 #define IP_TYPE_UDP 17
 
-struct ip_hdr decode_ip(const unsigned char *ip_header_start, FILE* outputFilePtr);
-bool get_ip_header(const unsigned char *ip_header_start, struct ip_hdr* ip_header);
+bool get_ip_header(const unsigned char *ip_header_start, struct ip_hdr* destination_header);
 void print_ip_header(const struct ip_hdr* ip_header, FILE* outputFilePtr);

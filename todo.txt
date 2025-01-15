@@ -1,2 +1,10 @@
 need to verify if the pointer list functions are working properly
 current pointer list implementation makes it so that the head contains no pointer. Change it 
+change all print byte orders so they match wireshark output. Also, add hexadecimal notation not just decimal notation
+capture dns responses as well
+make compatible with other architectures by changing data types and such
+remove "dump_to_file", because it is redundant
+dump raw packet data separately for debugging purposes
+print the dns additional flags properly
+remove pcap_fatal function
+prettify printing packets

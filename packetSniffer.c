@@ -23,7 +23,7 @@
 #include "packetFunctions.h"
 #include "otherFunctions.h"
 
-#define CAPTURECOUNT 20
+#define CAPTURECOUNT 30
 
 void pcap_fatal(const char *, const char *);
 
@@ -53,12 +53,34 @@ int main()
 		pcap_freealldevs(interface_list);
 		pcap_fatal("At handle", errbuf);
 	}
+
+	struct ethernet_packet* head_ptr;
+	head_ptr = (struct ethernet_packet*)malloc(sizeof(struct ethernet_packet));
+	if(head_ptr == NULL)
+		fatal("allocating space for head_ptr", "main", NULL);
+	head_ptr->next_packet = NULL;
+
+	struct pcap_handler_arguments args;
+	args.outputFilePtr = outputFilePtr;
+	args.packet_list_head = head_ptr;
+	args.packet_list_tail = head_ptr;
+
+	struct pcap_handler_arguments* arg_ptr = &args;
 	
-	pcap_loop(pcap_handle, CAPTURECOUNT, analyze_caught_packet, (unsigned char*)outputFilePtr);
+	pcap_loop(pcap_handle, CAPTURECOUNT, analyze_caught_packet, (unsigned char*)&arg_ptr);
 
 	pcap_freealldevs(interface_list);
 	printf("Successfully caught all packets\n");
 
+	printf("Printing packets...\n");
+	struct ethernet_packet* current = head_ptr->next_packet;
+	while(current != NULL)
+	{
+		print_packet(current, outputFilePtr);
+		current = current->next_packet;
+	}
+
+	fclose(outputFilePtr);
 	return 0;
 }
 

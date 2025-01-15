@@ -11,7 +11,7 @@ SOURCES = $(FILENAME).c
 OBJECTS = $(FILENAME).o
 
 # The fixed file that always stays the same
-FIXED_OBJECT = otherFunctions.o packetFunctions.o
+FIXED_OBJECT = otherFunctions.o packetFunctions.o ethernet.o ip.o tcp.o udp.o dns.o
 
 # The final executable name is based on the FILENAME
 EXECUTABLE = $(FILENAME)

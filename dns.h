@@ -73,20 +73,21 @@ struct dns_opt_record
 
 struct dns_query
 {
-	struct dns_hdr dns_query_header;
-	struct dns_query_section *dns_query_queries_list;
-	struct dns_response_section *dns_query_additional_list;
+	struct dns_hdr dns_header;
+	struct dns_query_section *dns_queries_list;
+	struct dns_response_section *dns_additional_list;
 };
 
 struct dns_response 
 {
-	struct dns_hdr dns_response_header;
-	struct dns_query_section dns_response_queries;
-	struct dns_response_section dns_response_answer;
-	struct dns_response_section dns_response_authoritative;
-	struct dns_response_section dns_response_additional;
+	struct dns_hdr dns_header;
+	struct dns_query_section* dns_queries_list;
+	struct dns_response_section *dns_answer_list;
+	struct dns_response_section *dns_authoritative_list;
+	struct dns_response_section *dns_additional_list;
 };
 
+// functions
 bool get_dns_query(const unsigned char *udp_payload_start, struct dns_query** dns_query_pointer);
 bool get_dns_response(const unsigned char *udp_payload_start, struct dns_response* dns_response_pointer);
 /*
@@ -95,5 +96,7 @@ bool get_dns_response(const unsigned char *udp_payload_start, struct dns_respons
  * returns NULL if domain name format is wrong
  */
 char* get_domain_name(const unsigned char* query_start_pointer, int *query_offset);
+void print_dns_query(struct dns_query* dns_query_packet, FILE* outputFilePtr);
 
+// debugging functions
 void debug_dns_packet(unsigned char *user_args, const unsigned char *packet, const int packet_length);

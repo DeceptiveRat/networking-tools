@@ -2,7 +2,10 @@ Version 1.0
 1. separated each layer function into separate header and c files.
 	1.1 new files: ethernet.c, ethernet.h, ip.c, ip.h, tcp.c, tcp.h, udp.c, udp.h, dns.c, dns.h
 2. added functions to print each layer.
+	2.1 removed the now redundant decode functions for each layer
 3. added function to remove a certain pointer in the allocated pointer list, file: otherFunctions.h.
-4. now "pcap_handler_arguments", file: packetFunctions.h, is passed to "analyze_caught_packet, file: packetFunctions.h. It contains a list of pointers to previously caught packets and the output file pointer.
+4. now "pcap_handler_arguments", file: packetFunctions.h, is passed to "analyze_caught_packet", file: packetFunctions.h, instead of the previous FILE pointer. It contains a list of pointers to previously caught packets and the output FILE pointer.
 5. "add_new_pointer", file: otherFunctions.h, now takes pointer to a pointer as the tail argument and sets it to point to the new tail if not null.
 6. added function to remove all pointers in the allocated pointer list, file:otherFunctions.h.
+7. all layer headers are now stored in host order, not just DNS
+	7.1 ip source and destination address is stored in network byte order so "inet_ntop" can be used

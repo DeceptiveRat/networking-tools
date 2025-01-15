@@ -103,7 +103,7 @@ void dump(const unsigned char* dataBuffer, const unsigned int length)
 					printf("%c ", byte);
 
 				else
-					printf(",");
+					printf(", ");
 			}
 
 			else
@@ -146,7 +146,7 @@ void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FI
 					fprintf(outputFilePtr, "%c ", byte);
 
 				else
-					fprintf(outputFilePtr, ",");
+					fprintf(outputFilePtr, ", ");
 			}
 
 			else
@@ -156,6 +156,48 @@ void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FI
 			}
 		}
 
+		fprintf(outputFilePtr, "\n");
+		printLocation += 16;
+	}
+}
+
+void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr, const char* prefix, const char* postfix)
+{
+	unsigned int printLocation = 0;
+	char byte;
+
+	while(printLocation < length)
+	{
+		fprintf(outputFilePtr, "%s", prefix);
+		for(int i = 0; i < 16; i++)
+		{
+			if(printLocation + i < length)
+				fprintf(outputFilePtr, "%02x ", dataBuffer[printLocation + i]);
+
+			else
+				fprintf(outputFilePtr, "   ");
+		}
+
+		fprintf(outputFilePtr, " | ");
+
+		for(int i = 0; i < 16; i++)
+		{
+			if(printLocation + i < length)
+			{
+				byte = dataBuffer[printLocation + i];
+
+				if(byte > 31 && byte < 127)
+					fprintf(outputFilePtr, "%c ", byte);
+
+				else
+					fprintf(outputFilePtr, ", ");
+			}
+
+			else
+				fprintf(outputFilePtr, "   ");
+		}
+
+		fprintf(outputFilePtr, "%s", postfix);
 		fprintf(outputFilePtr, "\n");
 		printLocation += 16;
 	}
@@ -250,7 +292,7 @@ void remove_from_list(struct allocated_pointers** head, struct allocated_pointer
 	current = *head;
 	previous = NULL;
 
-	if(current = remove_this)
+	if(current == remove_this)
 	{
 		*head = current->next_pointer;
 		if(*head == NULL)

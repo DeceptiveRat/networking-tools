@@ -33,7 +33,8 @@ int recvLine(int sockfd, unsigned char *destBuffer);
  */
 void dump(const unsigned char* dataBuffer, const unsigned int length);
 void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr);
-void hex_dump_only(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr);
+void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr, const char* prefix, const char* postfix);
+void hex_stream_dump(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr);
 
 void fatal(const char* message, const char* location, FILE* outputFilePtr);
 

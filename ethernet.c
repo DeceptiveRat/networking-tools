@@ -14,37 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with BPS.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <pcap.h>
 
 #include "ethernet.h"
 
-struct ether_hdr decode_ethernet(const unsigned char *header_start, FILE* outputFilePtr)
-{
-    const struct ether_hdr *ethernet_header;
-
-    ethernet_header = (const struct ether_hdr *)header_start;
-    fprintf(outputFilePtr, "[[  Ethernet Header  ]]\n");
-    fprintf(outputFilePtr, "[ Source: %02x", ethernet_header->ether_src_addr[0]);
-
-    for(int i = 1; i < ETHER_ADDR_LEN; i++)
-        fprintf(outputFilePtr, ":%02x", ethernet_header->ether_src_addr[i]);
-
-    fprintf(outputFilePtr, "\tDest: %02x", ethernet_header->ether_dest_addr[0]);
-
-    for(int i = 1; i < ETHER_ADDR_LEN; i++)
-        fprintf(outputFilePtr, ":%02x", ethernet_header->ether_dest_addr[i]);
-
-    fprintf(outputFilePtr, "\tType: %hu ]\n", ethernet_header->ether_type);
-
-    return *ethernet_header;
-}
-
-bool get_ethernet_header(const unsigned char *header_start, struct ether_hdr* ethernet_header)
+bool get_ethernet_header(const unsigned char *header_start, struct ether_hdr* destination_header)
 {
     // ***IMPORTANT: change code to verify ethernet later***
-    const struct ether_hdr *ethernet_header_pointer;
-    ethernet_header_pointer = (const struct ether_hdr *)header_start;
+    struct ether_hdr ethernet_header;
+    ethernet_header = *(struct ether_hdr *)header_start;
+	ethernet_header.ether_type = ntohs(ethernet_header.ether_type);
 
-    *ethernet_header = *ethernet_header_pointer;
+    *destination_header = ethernet_header;
     return true;
 }
 
@@ -62,5 +43,5 @@ void print_ethernet_header(const struct ether_hdr* ethernet_header, FILE* output
         fprintf(outputFilePtr, ":%02x", ethernet_header->ether_dest_addr[i]);
 
 	// TODO: change byte order later so it matches wireshark
-    fprintf(outputFilePtr, "\tType: %hu ]\n", ethernet_header->ether_type);
+    fprintf(outputFilePtr, "\tType: %hu(%x) ]\n", ethernet_header->ether_type, ethernet_header->ether_type);
 }

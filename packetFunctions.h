@@ -11,11 +11,17 @@
 #include "udp.h"
 #include "dns.h"
 
-#define ETHERNET_PACKET 0
-#define TCP_PACKET 20
-#define UDP_PACKET 40
-#define DNS_QUERY_PACKET 41
-#define DNS_RESPONSE_PACKET 42
+#define LINK_LAYER_TYPE 0xff000000
+#define ETHERNET_TYPE 0x01000000
+#define NETWORK_LAYER_TYPE 0xff0000
+#define IP_TYPE 0x010000
+#define TRANSPORT_LAYER_TYPE 0xff00
+#define TCP_TYPE 0x0100 
+#define UDP_TYPE 0x0200
+#define APPLICATION_LAYER_TYPE 0xff
+#define DNS_QUERY_TYPE 0x01 
+#define DNS_RESPONSE_TYPE 0x02
+#define HTTP_TYPE 0x04
 
 // =================================== structures =============================================
 struct pcap_handler_arguments
@@ -28,7 +34,7 @@ struct pcap_handler_arguments
 
 struct ethernet_packet
 {
-	char packet_type;
+	int packet_type;
 	struct ether_hdr* ethernet_header;
 	void* network_layer_structure;
 	void* transport_layer_structure;
@@ -84,3 +90,7 @@ struct dns_response_packet
 
 // pcap handler functions
 void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *cap_header, const unsigned char *packet);
+void save_remaining_bytes(const int length, struct ethernet_packet* saved_packet, const unsigned char* remaining_bytes);
+void print_packet(const struct ethernet_packet* packet, FILE* outputFilePtr);
+
+// debugging functions

@@ -14,6 +14,5 @@ struct ether_hdr
     unsigned short ether_type;
 };
 
-struct ether_hdr decode_ethernet(const unsigned char *ethernet_header_start, FILE* outputFilePtr);
-bool get_ethernet_header(const unsigned char *ethernet_header_start, struct ether_hdr* ethernet_header);
+bool get_ethernet_header(const unsigned char *ethernet_header_start, struct ether_hdr* destination_header);
 void print_ethernet_header(const struct ether_hdr* ethernet_header, FILE* outputFilePtr);
