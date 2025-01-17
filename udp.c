@@ -21,11 +21,11 @@
 #include "ip.h"
 #include "udp.h"
 
-char udp_checksum_matches(const unsigned char* packet_header)
+char udp_checksum_matches(const unsigned char *packet_start, unsigned short* checksum)
 {
-	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_header + ETHER_HDR_LEN);
-	struct udp_hdr* udp_header = (struct udp_hdr*)(packet_header + ETHER_HDR_LEN + sizeof(struct ip_hdr));
-	const unsigned char* data = packet_header + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct udp_hdr);
+	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_start + ETHER_HDR_LEN);
+	struct udp_hdr* udp_header = (struct udp_hdr*)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
+	const unsigned char* data = packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct udp_hdr);
 
 	unsigned int sum = 0;
 	sum += (ntohl(ip_header->ip_src_addr) >> 16) & 0xFFFF; // source addr
@@ -56,7 +56,8 @@ char udp_checksum_matches(const unsigned char* packet_header)
 		sum = (sum & 0xFFFF) + (sum >> 16);
 	}
 
-	return (((~sum) & 0xFFFF) == ntohs(udp_header->udp_checksum)) ? 1 : 0;
+	*checksum = (~sum) & 0xFFFF;
+	return (*checksum == ntohs(udp_header->udp_checksum)) ? 1 : 0;
 }
 
 bool get_udp_header(const unsigned char *header_start, struct udp_hdr* destination_header)

@@ -75,50 +75,7 @@ int recvLine(int sockfd, unsigned char *destBuffer)
 	return 0;
 }
 
-void dump(const unsigned char* dataBuffer, const unsigned int length)
-{
-	unsigned int printLocation = 0;
-	char byte;
-
-	while(printLocation <= length)
-	{
-		for(int i = 0; i < 16; i++)
-		{
-			if(printLocation + i < length)
-				printf("%02x ", dataBuffer[printLocation + i]);
-
-			else
-				printf("   ");
-		}
-
-		printf(" | ");
-
-		for(int i = 0; i < 16; i++)
-		{
-			if(printLocation + i < length)
-			{
-				byte = dataBuffer[printLocation + i];
-
-				if(byte > 31 && byte < 127)
-					printf("%c ", byte);
-
-				else
-					printf(", ");
-			}
-
-			else
-			{
-				printf("\n");
-				break;
-			}
-		}
-
-		printf("\n");
-		printLocation += 16;
-	}
-}
-
-void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr)
+void dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr)
 {
 	unsigned int printLocation = 0;
 	char byte;

@@ -23,9 +23,9 @@
 #include "packetFunctions.h"
 #include "otherFunctions.h"
 
-#define CAPTURECOUNT 30
-
-void pcap_fatal(const char *, const char *);
+#define CAPTURECOUNT 10
+#define OUTPUT_FILE "capture.log"
+#define RAW_OUTPUT_FILE "raw.log"
 
 int main()
 {
@@ -34,37 +34,40 @@ int main()
 	pcap_t *pcap_handle;
 
 	if(pcap_findalldevs(&interface_list, errbuf) == PCAP_ERROR)
-		pcap_fatal("At findalldevs", errbuf);
+		fatal("finding all devs", NULL, stdout);
 	
 	// choose first interface
 	pcap_if_t interface;
 	interface = *interface_list;
-	
 	printf("Sniffing on device %s (%s)\n", interface.name, interface.description);
-
-	FILE* outputFilePtr;
-	outputFilePtr = fopen("capture.log", "w");
-	if(outputFilePtr == NULL)
-		fatal("opening file", NULL, NULL);
-
 	pcap_handle = pcap_open_live(interface.name, 16384, 1, 100, errbuf);
 	if(pcap_handle == NULL)
-	{
-		pcap_freealldevs(interface_list);
-		pcap_fatal("At handle", errbuf);
-	}
+		fatal("opening handle", NULL, stdout);
 
-	struct ethernet_packet* head_ptr;
-	head_ptr = (struct ethernet_packet*)malloc(sizeof(struct ethernet_packet));
+	// open output files
+	FILE* outputFilePtr;
+	outputFilePtr = fopen(OUTPUT_FILE, "w");
+	if(outputFilePtr == NULL)
+		fatal("opening file", NULL, NULL);
+	FILE* rawOutputFilePtr;
+	rawOutputFilePtr = fopen(RAW_OUTPUT_FILE, "w");
+	if(rawOutputFilePtr == NULL)
+		fatal("opening file", NULL, NULL);
+
+	// allocate head for packet list
+	struct packet_structure* head_ptr;
+	head_ptr = (struct packet_structure*)malloc(sizeof(struct packet_structure));
 	if(head_ptr == NULL)
 		fatal("allocating space for head_ptr", "main", NULL);
 	head_ptr->next_packet = NULL;
 
+	// arguments for handler function
 	struct pcap_handler_arguments args;
 	args.outputFilePtr = outputFilePtr;
+	args.rawOutputFilePtr = rawOutputFilePtr;
 	args.packet_list_head = head_ptr;
 	args.packet_list_tail = head_ptr;
-
+	args.captured_count = 0;
 	struct pcap_handler_arguments* arg_ptr = &args;
 	
 	pcap_loop(pcap_handle, CAPTURECOUNT, analyze_caught_packet, (unsigned char*)&arg_ptr);
@@ -73,7 +76,7 @@ int main()
 	printf("Successfully caught all packets\n");
 
 	printf("Printing packets...\n");
-	struct ethernet_packet* current = head_ptr->next_packet;
+	struct packet_structure* current = head_ptr->next_packet;
 	while(current != NULL)
 	{
 		print_packet(current, outputFilePtr);
@@ -82,10 +85,4 @@ int main()
 
 	fclose(outputFilePtr);
 	return 0;
-}
-
-void pcap_fatal(const char *failed_in, const char *errbuf)
-{
-	printf("Fatal Error in %s: %s\n", failed_in, errbuf);
-	exit(1);
 }

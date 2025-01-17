@@ -27,12 +27,13 @@
 struct pcap_handler_arguments
 {
 	FILE* outputFilePtr;
-	struct ethernet_packet* packet_list_head;
-	struct ethernet_packet* packet_list_tail;
+	FILE* rawOutputFilePtr;
+	struct packet_structure* packet_list_head;
+	struct packet_structure* packet_list_tail;
 	int captured_count;
 };
 
-struct ethernet_packet
+struct packet_structure
 {
 	int packet_type;
 	struct ether_hdr* ethernet_header;
@@ -41,56 +42,12 @@ struct ethernet_packet
 	void* application_layer_structure;
 	unsigned char* remaining_bytes;
 	int remaining_length;
-	struct ethernet_packet* next_packet;
-};
-
-struct tcp_packet
-{
-	char packet_type;
-	struct ether_hdr* ethernet_header;
-	struct ip_hdr* ip_header;
-	struct tcp_hdr* tcp_header;
-	void* application_layer_structure;
-	unsigned char* remaining_bytes;
-	int remaining_length;
-	struct ethernet_packet* next_packet;
-};
-
-struct udp_packet
-{
-	char packet_type;
-	struct ether_hdr* ethernet_header;
-	struct ip_hdr* ip_header;
-	struct udp_hdr* udp_header;
-	void* application_layer_structure;
-	unsigned char* remaining_bytes;
-	int remaining_length;
-	struct ethernet_packet* next_packet;
-};
-
-struct dns_query_packet
-{
-	char packet_type;
-	struct ether_hdr* ethernet_header;
-	struct ip_hdr* ip_header;
-	struct udp_hdr* udp_header;
-	struct dns_query* dns_query_payload;
-	struct ethernet_packet* next_packet;
-};
-
-struct dns_response_packet
-{
-	char packet_type;
-	struct ether_hdr* ethernet_header;
-	struct ip_hdr* ip_header;
-	struct udp_hdr* udp_header;
-	struct dns_response* dns_response_payload;
-	struct ethernet_packet* next_packet;
+	struct packet_structure* next_packet;
 };
 
 // pcap handler functions
 void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *cap_header, const unsigned char *packet);
-void save_remaining_bytes(const int length, struct ethernet_packet* saved_packet, const unsigned char* remaining_bytes);
-void print_packet(const struct ethernet_packet* packet, FILE* outputFilePtr);
+void save_remaining_bytes(const int length, struct packet_structure* saved_packet, const unsigned char* remaining_bytes);
+void print_packet(const struct packet_structure* packet, FILE* outputFilePtr);
 
 // debugging functions

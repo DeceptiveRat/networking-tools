@@ -11,4 +11,12 @@ Version 1.0
 	7.1 ip source and destination address is stored in network byte order so "inet_ntop" can be used
 
 Version 1.1
-
+1. removed "pcap_fatal" function, file: packetSniffer.c.
+2. added more elements to "pcap_handler_arguments", file: packetFunctions.h.
+	2.1 rawOutputFilePtr: to print raw bytes of the function
+3. when a packet is dropped because the checksum doesn't match, print the expected (calculated) checksum and the actual checksum for comparison.
+	3.1 to do this, the "tcp/udp_checksum_matches" functions, file: tcp.h/udp.h, now take an additional argument to save the checksum to.
+4. removed "dump" function, file: otherFunctions.h, and renamed "dump_to_file", file: otherFunctions.h, function to "dump".
+5. removed "debug_dns_packet" function, file: dns.h, because it is now redundant.
+6. removed all other structure for packets except "ethernet_packet" and renamed it to "packet_structure", file: packetFunctions.h.
+7. the raw bytes of a packet is dumped to a different file now.

@@ -35,6 +35,7 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 	// use user arguments
 	struct pcap_handler_arguments* args = *(struct pcap_handler_arguments**)user_args;
 	FILE* outputFilePtr = args->outputFilePtr;
+	FILE* rawOutputFilePtr = args->rawOutputFilePtr;
 
 	// initialize allocated pointers list
 	struct allocated_pointers* head = NULL;
@@ -45,14 +46,14 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 	struct allocated_pointers* tail = head;
 
 	// ethernet_packet structure to store current packet
-	struct ethernet_packet* saved_packet;
-	saved_packet = (struct ethernet_packet*)malloc(sizeof(struct ethernet_packet));
+	struct packet_structure* saved_packet;
+	saved_packet = (struct packet_structure*)malloc(sizeof(struct packet_structure));
 	if(saved_packet == NULL)
 		fatal("allocating memory for saved_packet", functionName, outputFilePtr);
 	add_new_pointer(head, &tail, saved_packet);
-	memset(saved_packet, 0, sizeof(struct ethernet_packet));
+	memset(saved_packet, 0, sizeof(struct packet_structure));
 
-	fprintf(outputFilePtr, "==== Got a %d byte packet ====\n", cap_header->len);
+	fprintf(outputFilePtr, "[%d] Got a %d byte packet\n", args->captured_count, cap_header->len);
 
 	// ============================ get link layer ===================================
 	struct ether_hdr* ethernet_header = NULL;
@@ -83,17 +84,10 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 	// ============================ get transport layer ===================================
 	struct tcp_hdr* tcp_header = NULL;
 	struct udp_hdr* udp_header = NULL;
+	unsigned short checksum;
 
 	if(ip_header->ip_type == IP_TYPE_TCP)
 	{
-		if(tcp_checksum_matches(packet) != 1)
-		{
-			fprintf(outputFilePtr, "checksum doesn't match\n");
-			fprintf(outputFilePtr, "TCP packet dropped.\n");
-			free_all_pointers(head);
-			return;
-		}
-
 		tcp_header = (struct tcp_hdr*)malloc(TCP_HDR_LEN);
 		if(tcp_header == NULL)
 			fatal("allocating memory: tcp_header", functionName, outputFilePtr);
@@ -103,18 +97,24 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 		saved_packet->transport_layer_structure = tcp_header;
 		saved_packet->packet_type |= TCP_TYPE;
 		total_header_size += tcp_header_length;
-	}
 
-	else if(ip_header->ip_type == IP_TYPE_UDP)
-	{
-		if(udp_checksum_matches(packet) != 1)
+		if(tcp_checksum_matches(packet, &checksum) != 1)
 		{
 			fprintf(outputFilePtr, "checksum doesn't match\n");
-			fprintf(outputFilePtr, "UDP packet dropped.\n");
+			fprintf(outputFilePtr, "TCP packet dropped.\n");
+			fprintf(outputFilePtr, "expected: %hu\n", checksum);
+			fprintf(outputFilePtr, "got: %hu\n", tcp_header->tcp_checksum);
+			fprintf(rawOutputFilePtr, "[%d] packet dump:\n", args->captured_count);
+			hex_stream_dump(packet, cap_header->len, rawOutputFilePtr);
+			args->captured_count++;
 			free_all_pointers(head);
 			return;
 		}
 
+	}
+
+	else if(ip_header->ip_type == IP_TYPE_UDP)
+	{
 		udp_header = (struct udp_hdr*)malloc(UDP_HDR_LEN);
 		if(udp_header == NULL)
 			fatal("allocating memory: udp_header", functionName, outputFilePtr);
@@ -124,6 +124,19 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 		saved_packet->transport_layer_structure = udp_header;
 		saved_packet->packet_type |= UDP_TYPE;
 		total_header_size += UDP_HDR_LEN;
+
+		if(udp_checksum_matches(packet, &checksum) != 1)
+		{
+			fprintf(outputFilePtr, "checksum doesn't match\n");
+			fprintf(outputFilePtr, "UDP packet dropped.\n");
+			fprintf(outputFilePtr, "expected: %hu\n", checksum);
+			fprintf(outputFilePtr, "got: %hu\n", udp_header->udp_checksum);
+			fprintf(rawOutputFilePtr, "[%d] packet dump:\n", args->captured_count);
+			hex_stream_dump(packet, cap_header->len, rawOutputFilePtr);
+			args->captured_count++;
+			free_all_pointers(head);
+			return;
+		}
 	}
 
 	else
@@ -131,6 +144,8 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 		fprintf(outputFilePtr, "unknown type\n");
 		save_remaining_bytes((cap_header->len) - total_header_size, saved_packet, (unsigned char*)(packet + total_header_size));
 
+		fprintf(rawOutputFilePtr, "[%d] packet dump:\n", args->captured_count);
+		hex_stream_dump(packet, cap_header->len, rawOutputFilePtr);
 		args->packet_list_tail->next_packet = saved_packet;
 		args->packet_list_tail = saved_packet;
 		args->captured_count++;
@@ -162,6 +177,8 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 	else
 		save_remaining_bytes((cap_header->len) - total_header_size, saved_packet, (unsigned char*)(packet + total_header_size));
 
+	fprintf(rawOutputFilePtr, "[%d] packet dump:\n", args->captured_count);
+	hex_stream_dump(packet, cap_header->len, rawOutputFilePtr);
 	args->packet_list_tail->next_packet = saved_packet;
 	args->packet_list_tail = saved_packet;
 	args->captured_count++;
@@ -169,14 +186,14 @@ void analyze_caught_packet(unsigned char *user_args, const struct pcap_pkthdr *c
 	return;
 }
 
-void save_remaining_bytes(const int length, struct ethernet_packet* saved_packet, const unsigned char* remaining_bytes)
+void save_remaining_bytes(const int length, struct packet_structure* saved_packet, const unsigned char* remaining_bytes)
 {
 	saved_packet->remaining_length = length;
 	saved_packet->remaining_bytes = (unsigned char*)malloc(length);
 	memcpy(saved_packet->remaining_bytes, remaining_bytes, length);
 }
 
-void print_packet(const struct ethernet_packet* packet, FILE* outputFilePtr)
+void print_packet(const struct packet_structure* packet, FILE* outputFilePtr)
 {
 	// link layer
 	print_ethernet_header(packet->ethernet_header, outputFilePtr);

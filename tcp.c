@@ -21,11 +21,11 @@
 #include "ip.h"
 #include "tcp.h"
 
-char tcp_checksum_matches(const unsigned char* packet_header)
+char tcp_checksum_matches(const unsigned char *packet_start, unsigned short* checksum)
 {
-	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_header + ETHER_HDR_LEN);
-	struct tcp_hdr* tcp_header = (struct tcp_hdr*)(packet_header + ETHER_HDR_LEN + sizeof(struct ip_hdr));
-	const unsigned char* data = packet_header + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct tcp_hdr);
+	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_start + ETHER_HDR_LEN);
+	struct tcp_hdr* tcp_header = (struct tcp_hdr*)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
+	const unsigned char* data = packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct tcp_hdr);
 
 	unsigned int sum = 0;
 	sum += (ntohl(ip_header->ip_src_addr) >> 16) & 0xFFFF; // source addr
@@ -64,7 +64,8 @@ char tcp_checksum_matches(const unsigned char* packet_header)
 		sum = (sum & 0xFFFF) + (sum >> 16);
 	}
 
-	return (((~sum) & 0xFFFF) == ntohs(tcp_header->tcp_checksum)) ? 1 : 0;
+	*checksum = (~sum) & 0xFFFF;
+	return (*checksum == ntohs(tcp_header->tcp_checksum)) ? 1 : 0;
 }
 
 bool get_tcp_header(const unsigned char *header_start, struct tcp_hdr* destination_header, int *tcp_header_size)

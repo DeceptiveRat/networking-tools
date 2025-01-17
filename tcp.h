@@ -32,6 +32,6 @@ struct tcp_hdr_options
 	// work in progress
 };
 
-char tcp_checksum_matches(const unsigned char *header_start);
+char tcp_checksum_matches(const unsigned char *packet_start, unsigned short* checksum);
 bool get_tcp_header(const unsigned char *header_start, struct tcp_hdr* destination_header, int *tcp_header_size);
 void print_tcp_header(const struct tcp_hdr *tcp_header, FILE* outputFilePtr);

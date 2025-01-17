@@ -32,7 +32,7 @@ bool get_ethernet_header(const unsigned char *header_start, struct ether_hdr* de
 void print_ethernet_header(const struct ether_hdr* ethernet_header, FILE* outputFilePtr)
 {
     fprintf(outputFilePtr, "[[  Ethernet Header  ]]\n");
-    fprintf(outputFilePtr, "[ Source: %02x", ethernet_header->ether_src_addr[0]);
+    fprintf(outputFilePtr, "[  Source: %02x", ethernet_header->ether_src_addr[0]);
 
     for(int i = 1; i < ETHER_ADDR_LEN; i++)
         fprintf(outputFilePtr, ":%02x", ethernet_header->ether_src_addr[i]);
@@ -43,5 +43,5 @@ void print_ethernet_header(const struct ether_hdr* ethernet_header, FILE* output
         fprintf(outputFilePtr, ":%02x", ethernet_header->ether_dest_addr[i]);
 
 	// TODO: change byte order later so it matches wireshark
-    fprintf(outputFilePtr, "\tType: %hu(%x) ]\n", ethernet_header->ether_type, ethernet_header->ether_type);
+    fprintf(outputFilePtr, "\tType: %hu(%x)  ]\n", ethernet_header->ether_type, ethernet_header->ether_type);
 }

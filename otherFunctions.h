@@ -25,14 +25,7 @@ int sendString(int sockfd, unsigned char *buffer);
  */
 int recvLine(int sockfd, unsigned char *destBuffer);
 
-/*
- * Dump dataBuffer to:
- * dump -> stdout
- * dump_to_file -> file 
- * hex_dump_only -> file
- */
-void dump(const unsigned char* dataBuffer, const unsigned int length);
-void dump_to_file(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr);
+void dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr);
 void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr, const char* prefix, const char* postfix);
 void hex_stream_dump(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr);
 
