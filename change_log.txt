@@ -9,3 +9,6 @@ Version 1.0
 6. added function to remove all pointers in the allocated pointer list, file:otherFunctions.h.
 7. all layer headers are now stored in host order, not just DNS
 	7.1 ip source and destination address is stored in network byte order so "inet_ntop" can be used
+
+Version 1.1
+
