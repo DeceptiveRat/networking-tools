@@ -1,4 +1,4 @@
-/* 
+/*
  * This file is part of BPS.
  *
  * BPS is free software: you can redistribute it and/or modify
@@ -22,10 +22,9 @@
 
 #include "otherFunctions.h"
 
-int sendString(int sockfd, unsigned char *buffer)
+int sendString(int sockfd, const unsigned char *buffer, int bytesToSend)
 {
-	int sentBytes, bytesToSend;
-	bytesToSend = strlen((char*)buffer);
+	int sentBytes;
 
 	while(bytesToSend > 0)
 	{
@@ -61,7 +60,7 @@ int recvLine(int sockfd, unsigned char *destBuffer)
 			if(eolMatched == EOL_SIZE)
 			{
 				*(ptr - EOL_SIZE + 1) = '\0';
-				return strlen((char*)destBuffer);
+				return strlen((char *)destBuffer);
 			}
 		}
 
@@ -75,7 +74,7 @@ int recvLine(int sockfd, unsigned char *destBuffer)
 	return 0;
 }
 
-void dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr)
+void dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr)
 {
 	unsigned int printLocation = 0;
 	char byte;
@@ -118,7 +117,7 @@ void dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outp
 	}
 }
 
-void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FILE* outputFilePtr, const char* prefix, const char* postfix)
+void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr, const char *prefix, const char *postfix)
 {
 	unsigned int printLocation = 0;
 	char byte;
@@ -126,6 +125,7 @@ void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FIL
 	while(printLocation < length)
 	{
 		fprintf(outputFilePtr, "%s", prefix);
+
 		for(int i = 0; i < 16; i++)
 		{
 			if(printLocation + i < length)
@@ -160,7 +160,7 @@ void pretty_dump(const unsigned char* dataBuffer, const unsigned int length, FIL
 	}
 }
 
-void hex_stream_dump(const unsigned char* databuffer, const unsigned int length, FILE* outputFilePtr)
+void hex_stream_dump(const unsigned char *databuffer, const unsigned int length, FILE *outputFilePtr)
 {
 	unsigned int printLocation = 0;
 
@@ -173,7 +173,7 @@ void hex_stream_dump(const unsigned char* databuffer, const unsigned int length,
 	fprintf(outputFilePtr, "\n");
 }
 
-void fatal(const char *message, const char *location, FILE* outputFilePtr)
+void fatal(const char *message, const char *location, FILE *outputFilePtr)
 {
 	char error_message[ERROR_MESSAGE_SIZE];
 	int lengthLeft = ERROR_MESSAGE_SIZE;
@@ -188,17 +188,14 @@ void fatal(const char *message, const char *location, FILE* outputFilePtr)
 	lengthLeft -= strlen(location);
 
 	if(outputFilePtr != NULL)
-		fprintf(outputFilePtr, "%s", error_message);
-
-	strncat(error_message, "\nError", lengthLeft);
-	perror(error_message);
+		fprintf(outputFilePtr, "%s\n", error_message);
 	exit(-1);
 }
 
-void free_all_pointers(struct allocated_pointers* head)
+void free_all_pointers(struct allocated_pointers *head)
 {
-	struct allocated_pointers* next = NULL;
-	struct allocated_pointers* prev = NULL;
+	struct allocated_pointers *next = NULL;
+	struct allocated_pointers *prev = NULL;
 	next = head->next_pointer;
 	prev = head;
 
@@ -213,9 +210,10 @@ void free_all_pointers(struct allocated_pointers* head)
 	free(prev);
 }
 
-void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers** tail, void* new_pointer)
+void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers **tail, void *new_pointer)
 {
-	struct allocated_pointers* new_node = (struct allocated_pointers*)malloc(sizeof(struct allocated_pointers));
+	struct allocated_pointers *new_node = (struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
+
 	if(new_node == NULL)
 	{
 		free_all_pointers(head);
@@ -224,27 +222,31 @@ void add_new_pointer(struct allocated_pointers* head, struct allocated_pointers*
 
 	new_node->pointer = new_pointer;
 	new_node->next_pointer = NULL;
-	
-	struct allocated_pointers* tail_pointer;
+
+	struct allocated_pointers *tail_pointer;
+
 	// find tail automatically if tail is NULL
 	if(tail == NULL)
 	{
 		tail_pointer = head;
+
 		while(tail_pointer->next_pointer != NULL)
 			tail_pointer = tail_pointer->next_pointer;
 	}
+
 	else
 		tail_pointer = *tail;
 
 	tail_pointer->next_pointer = new_node;
+
 	if(tail != NULL)
 		*tail = new_node;
 }
 
-void remove_from_list(struct allocated_pointers** head, struct allocated_pointers** tail, void* remove_this)
+void remove_from_list(struct allocated_pointers **head, struct allocated_pointers **tail, void *remove_this)
 {
-	struct allocated_pointers* current;
-	struct allocated_pointers* previous;
+	struct allocated_pointers *current;
+	struct allocated_pointers *previous;
 
 	current = *head;
 	previous = NULL;
@@ -252,8 +254,10 @@ void remove_from_list(struct allocated_pointers** head, struct allocated_pointer
 	if(current == remove_this)
 	{
 		*head = current->next_pointer;
+
 		if(*head == NULL)
 			*tail = NULL;
+
 		free(current);
 		return;
 	}
@@ -262,23 +266,27 @@ void remove_from_list(struct allocated_pointers** head, struct allocated_pointer
 	{
 		previous = current;
 		current = current->next_pointer;
+
 		if(current == NULL)
 			fatal("pointer to free not found in allocated pointer list", "free_pointer", NULL);
 	}
 
 	previous->next_pointer = current->next_pointer;
 	free(current);
+
 	if(previous->next_pointer == NULL)
 		*tail = previous;
+
 	return;
 }
 
-void remove_all_from_list(struct allocated_pointers* head)
+void remove_all_from_list(struct allocated_pointers *head)
 {
-	struct allocated_pointers* current;
-	struct allocated_pointers* previous;
+	struct allocated_pointers *current;
+	struct allocated_pointers *previous;
 
 	current = head;
+
 	if(current->next_pointer == NULL)
 	{
 		free(current);
@@ -293,33 +301,38 @@ void remove_all_from_list(struct allocated_pointers* head)
 	}
 }
 
-int hex_stream_to_bytes(char* fileName, unsigned char** packet)
+int hex_stream_to_bytes(char *fileName, unsigned char **packet)
 {
-	FILE* inputFilePtr = fopen(fileName, "r");
+	FILE *inputFilePtr = fopen(fileName, "r");
+
 	if(inputFilePtr == NULL)
 		fatal("converting hex stream to bytes", "hex_stream_to_bytes", NULL);
-	
+
 	char hex_stream[HEX_STREAM_LENGTH];
 	int stream_length = fread(hex_stream, 1, HEX_STREAM_LENGTH, inputFilePtr);
 	fclose(inputFilePtr);
 
-	hex_stream[stream_length-1] = '\0';
+	hex_stream[stream_length - 1] = '\0';
 	stream_length--;
-	if(stream_length%2 != 0)
+
+	if(stream_length % 2 != 0)
 		fatal("stream length not even", "hex_stream_to_bytes", NULL);
+
 	char byte[3];
 	byte[2] = '\0';
-	unsigned char* bytes = (unsigned char*)malloc(stream_length/2);
+	unsigned char *bytes = (unsigned char *)malloc(stream_length / 2);
+
 	if(bytes == NULL)
 		fatal("allocating space for bytes", "hex_stream_to_bytes", NULL);
-	for(int i = 0;i<stream_length;i+=2)
+
+	for(int i = 0; i < stream_length; i += 2)
 	{
 		byte[0] = hex_stream[i];
-		byte[1] = hex_stream[i+1];
-		bytes[i/2] = (unsigned char)strtol(byte, NULL, 16);
+		byte[1] = hex_stream[i + 1];
+		bytes[i / 2] = (unsigned char)strtol(byte, NULL, 16);
 	}
 
 	*packet = bytes;
 
-	return stream_length/2;
+	return stream_length / 2;
 }

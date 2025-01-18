@@ -1,10 +1,14 @@
-need to verify if the pointer list functions are working properly
-current pointer list implementation makes it so that the head contains no pointer. Change it 
-change all print byte orders so they match wireshark output. Also, add hexadecimal notation not just decimal notation
-capture dns responses as well
-make compatible with other architectures by changing data types and such
-print the dns additional flags properly
-prettify printing packets
-organize directory
-verify IP checksum
-parse TCP header options
+### Packet Sniffer
+- need to verify if the pointer list functions are working properly
+- current pointer list implementation makes it so that the head contains no pointer. Change it 
+- change all print byte orders so they match wireshark output. Also, add hexadecimal notation not just decimal notation
+- capture dns responses as well
+- make compatible with other architectures by changing data types and such
+- print the dns additional flags properly
+- prettify printing packets
+- organize directory
+- verify IP checksum
+- parse TCP header options
+- multithread
+- IP length can vary as well
+- detect other protocols, i.e. HTTP, ICMP, SMTP, etc
