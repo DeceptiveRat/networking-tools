@@ -1,22 +1,30 @@
-# Simple Packet Sniffer
+### Simple Packet Sniffer
 ## 1 Description
 Toy project to help myself learn/practice:
 - socket programming
 - internet protocols and their fields
 
-## 2 Installation
-git clone the repository into your desktop environment and you are good to go!
-(Note: originally developed for Linux Operating Systems. Will not work in Windows environments)
+## 2 Usage
+Navigate to the Packet Sniffer directory
 
-## 3 Usage
 ```bash 
+./compile.sh
 sudo ./packetSniffer
 ```
-to start the program. 
+to run the sniffer
 
-Choose the interface you want to use.
+### Internet Simulator
+## 1 Description
+Network faker to trick malware into thinking it is connected to the internet.
 
-If you open the new txt file, the packets that have been caught are displayed there.
+## 2 Usage
+Navigate to the Internet Simulator directory
 
-## 4 License 
+```bash 
+./compile.sh
+sudo ./iSim
+```
+to run the sniffer
+
+### License 
 This project is licensed under the GNU General Public License v3. See the [LICENSE](LICENSE) file for details.

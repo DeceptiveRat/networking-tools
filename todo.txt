@@ -12,3 +12,25 @@
 - multithread
 - IP length can vary as well
 - detect other protocols, i.e. HTTP, ICMP, SMTP, etc
+
+### Internet Simulator
+## change of purpose:
+	used to be a proxy server with the purpose of hiding the end user from the server
+	now a tool to view the exchanges between a program(malware) and the server(C2 server), much like burpsuite
+	Any code that doesn't fit this new philosophy should be discarded (Version 2.0 contains all the discarded features and should be used if any code needs to be restored)
+
+## clean up code:
+- change multiple fprintf and printfs to one function 
+- move functions to different files if possible
+
+## add new feature:
+- need to be able to let some packets through
+	- log responses from servers
+	- choose to let the responses through or not?
+- create standard response 
+	- one each for html, html + js, etc?
+- improve the bulk_print function
+
+
+- Change README.md to reflect new changes
+- Change the license header in each file

@@ -1,18 +1,18 @@
 /*
- * This file is part of BPS.
+ * This file is part of networking-tools.
  *
- * BPS is free software: you can redistribute it and/or modify
+ * networking-tools is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * BPS is distributed in the hope that it will be useful,
+ * networking-tools is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with BPS.  If not, see <https://www.gnu.org/licenses/>.
+ * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -173,25 +173,6 @@ void hex_stream_dump(const unsigned char *databuffer, const unsigned int length,
 	fprintf(outputFilePtr, "\n");
 }
 
-void fatal(const char *message, const char *location, FILE *outputFilePtr)
-{
-	char error_message[ERROR_MESSAGE_SIZE];
-	int lengthLeft = ERROR_MESSAGE_SIZE;
-
-	strcpy(error_message, "[!!] Fatal Error ");
-	lengthLeft -= 17;
-	strncat(error_message, message, lengthLeft);
-	lengthLeft -= strlen(message);
-	strncat(error_message, "\nIn function: ", lengthLeft);
-	lengthLeft -= 14;
-	strncat(error_message, location, lengthLeft);
-	lengthLeft -= strlen(location);
-
-	if(outputFilePtr != NULL)
-		fprintf(outputFilePtr, "%s\n", error_message);
-	exit(-1);
-}
-
 void free_all_pointers(struct allocated_pointers *head)
 {
 	struct allocated_pointers *next = NULL;
@@ -299,6 +280,54 @@ void remove_all_from_list(struct allocated_pointers *head)
 		current = current->next_pointer;
 		free(previous);
 	}
+}
+
+void fatal(const char *message, const char *location, FILE *outputFilePtr)
+{
+	char error_message[ERROR_MESSAGE_SIZE];
+	int lengthLeft = ERROR_MESSAGE_SIZE;
+
+	strcpy(error_message, "[!!] Fatal Error ");
+	lengthLeft -= 17;
+	strncat(error_message, message, lengthLeft);
+	lengthLeft -= strlen(message);
+	strncat(error_message, "\nIn function: ", lengthLeft);
+	lengthLeft -= 14;
+	strncat(error_message, location, lengthLeft);
+	lengthLeft -= strlen(location);
+
+	if(outputFilePtr != NULL)
+		fprintf(outputFilePtr, "%s\nerrno: %d", error_message, errno);
+	exit(-1);
+}
+
+void bulk_print(const struct FILE_POINTERS files, int argCount, ...)
+{
+#define MAX_STRING_LENGTH 30
+	va_list args;
+	va_start(args, argCount);
+	char string[MAX_STRING_LENGTH];
+	for(int j = 0;j<argCount;j++)
+	{
+		strcpy(string, va_arg(args, char*));
+		for(int i = 0;i<files.count;i++)
+			fprintf(files.pointers[i], "%s", string);
+	}
+	va_end(args);
+}
+
+void itoa(const int number, char* destination)
+{
+	if(number == 0)
+	{
+		destination[0] = '0';
+		destination[1] = '\0';
+		return;
+	}
+	int digitCount = floor(log(number)/log(10)) + 1;
+	for(int i = 0;i<digitCount;i++)
+		destination[i] = (number/((int)pow(10, digitCount - 1 - i)) %10) + '0';
+	destination[digitCount] = '\0';
 }
 
 int hex_stream_to_bytes(char *fileName, unsigned char **packet)

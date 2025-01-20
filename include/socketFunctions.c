@@ -1,3 +1,20 @@
+/*
+ * This file is part of networking-tools.
+ *
+ * networking-tools is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * networking-tools is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +36,7 @@ pthread_mutex_t mutex_outputFile = PTHREAD_MUTEX_INITIALIZER;
 char domainNames[DOMAIN_NAME_COUNT][DOMAIN_NAME_LENGTH];
 void setDomainNames()
 {
-	FILE* domainNameFile = NULL;
+	FILE *domainNameFile = NULL;
 	domainNameFile = fopen(DOMAIN_NAME_FILE_NAME, "r");
 
 	if(domainNameFile == NULL)
@@ -31,15 +48,20 @@ void setDomainNames()
 	fclose(domainNameFile);
 }
 
-void setupConnectionResources(struct connectionResources* connections, int connectionCount, FILE* globalOutputFilePtr, struct requestCache* cachePtr)
+void setupConnectionResources(struct connectionResources *connections, int connectionCount, FILE *globalOutputFilePtr)
 {
 	for(int i = 0; i < connectionCount; i++)
 	{
-		FILE* outputFilePtr = 0;
-		char fileName[FILE_NAME_LENGTH];
-		strcpy(fileName, "connection ");
-		fileName[11] = i + '0';
-		strcpy(fileName + 12, " data exchange.log");
+		FILE *outputFilePtr = 0;
+		char fileName[OUTPUT_FILE_NAME_LENGTH];
+		char filepath[] = OUTPUT_FILE_PATH;
+		char connectionNumber[5];
+		int filepath_length = strlen(filepath);
+		strcpy(fileName, filepath);
+		strcat(fileName, "connection ");
+		itoa(i, connectionNumber);
+		strcat(fileName, connectionNumber);
+		strcat(fileName, " data exchange.log");
 		outputFilePtr = fopen(fileName, "w");
 
 		if(outputFilePtr == NULL)
@@ -52,7 +74,7 @@ void setupConnectionResources(struct connectionResources* connections, int conne
 		// connection info
 		connections[i].serverArgs.socket = &connections[i].serverSocket;
 		connections[i].serverArgs.connectionID = i;
-		memcpy(connections[i].serverArgs.connectedTo, "server\0", 7);
+		memcpy(connections[i].serverArgs.connectedTo, "server\0", NAME_LENGTH);
 		connections[i].serverArgs.shutDown = &connections[i].shutDown;
 		// read/write buffer info
 		connections[i].serverArgs.writeBufferSize = &connections[i].dataFromServerSize;
@@ -65,14 +87,12 @@ void setupConnectionResources(struct connectionResources* connections, int conne
 		// mutex locks
 		connections[i].serverArgs.mutex_writeBufferSize = &connections[i].mutex_dataFromServerSize;
 		connections[i].serverArgs.mutex_readBufferSize = &connections[i].mutex_dataFromClientSize;
-		// cache info
-		connections[i].serverArgs.cachePtr = NULL;
 
 		// set up client arguments
 		// connection info
 		connections[i].clientArgs.socket = &connections[i].clientSocket;
 		connections[i].clientArgs.connectionID = i;
-		memcpy(connections[i].clientArgs.connectedTo, "client\0", 7);
+		memcpy(connections[i].clientArgs.connectedTo, "client\0", NAME_LENGTH);
 		connections[i].clientArgs.shutDown = &connections[i].shutDown;
 		// read/write buffer info
 		connections[i].clientArgs.writeBufferSize = &connections[i].dataFromClientSize;
@@ -85,16 +105,14 @@ void setupConnectionResources(struct connectionResources* connections, int conne
 		// mutex locks
 		connections[i].clientArgs.mutex_writeBufferSize = &connections[i].mutex_dataFromClientSize;
 		connections[i].clientArgs.mutex_readBufferSize = &connections[i].mutex_dataFromServerSize;
-		// cache info
-		connections[i].clientArgs.cachePtr = cachePtr;
 	}
 }
 
-pthread_mutex_t* setupMutexes()
+pthread_mutex_t *setupMutexes()
 {
 	char functionName[] = "setupMutexes";
 	pthread_mutex_t *mutexList = NULL;
-	mutexList = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * MAX_CONNECTION_COUNT * 3);
+	mutexList = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * MAX_CONNECTION_COUNT * 3);
 
 	if(mutexList == NULL)
 		fatal("creating mutexes", functionName, stdout);
@@ -108,7 +126,7 @@ pthread_mutex_t* setupMutexes()
 	return mutexList;
 }
 
-void cleanMutexes(pthread_mutex_t* mutexes)
+void cleanMutexes(pthread_mutex_t *mutexes)
 {
 	for(int i = 0; i < MAX_CONNECTION_COUNT * 2; i++)
 	{
@@ -119,21 +137,16 @@ void cleanMutexes(pthread_mutex_t* mutexes)
 	free(mutexes);
 }
 
-void handleConnection() {
+void handleConnection()
+{
 	char functionName[] = "handleConnection";
 	setDomainNames();
 
-	struct requestCache* cachePtr;
-	cachePtr = (struct requestCache*)malloc(sizeof(struct requestCache) * CACHE_SIZE);
-
-	if(cachePtr == NULL)
-		fatal("allocating memory for cache", functionName, stdout);
-
-	if(readCacheFromFile(cachePtr) == -1)
-		memset(cachePtr, 0, sizeof(struct requestCache)*CACHE_SIZE);
-
-	FILE* outputFilePtr = 0;
-	outputFilePtr = fopen("all exchanges.log", "w");
+	FILE *outputFilePtr = 0;
+	char path[OUTPUT_FILE_NAME_LENGTH];
+	strcpy(path, OUTPUT_FILE_PATH);
+	strcat(path, "all exchanges.log");
+	outputFilePtr = fopen(path, "w");
 
 	if(outputFilePtr == NULL)
 		fatal("opening file", functionName, stdout);
@@ -149,7 +162,7 @@ void handleConnection() {
 		connections[i].mutex_dataFromServerSize = mutexes[i * 2 + 1];
 	}
 
-	setupConnectionResources(connections, MAX_CONNECTION_COUNT, outputFilePtr, cachePtr);
+	setupConnectionResources(connections, MAX_CONNECTION_COUNT, outputFilePtr);
 	int connectionCount = 0;
 
 	// initialize variables for listening thread
@@ -210,6 +223,7 @@ void handleConnection() {
 					close(temp->clientSocket);
 					continue;
 				}
+
 				// clean up code
 				for(int i = 0; i < MAX_CONNECTION_COUNT; i++)
 					connections[i].shutDown = true;
@@ -220,16 +234,12 @@ void handleConnection() {
 				//cleanupConnections(connections, connectionCount);
 				pthread_mutex_destroy(&mutex_outputFile);
 				fclose(outputFilePtr);
-				if(saveCacheToFile(cachePtr) == -1)
-					printf("error saving cache\n");
-				free(cachePtr);
 				cleanMutexes(mutexes);
 				fatal("receiving from client", functionName, stdout);
 			}
 
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[   main   ] received %d bytes from client %d\n", receiveLength, connectionCount);
-			dump(temp->dataFromClient, receiveLength, stdout);
 			fprintf(temp->outputFilePtr, "[   main   ] received %d bytes from client %d\n", receiveLength, connectionCount);
 			dump(temp->dataFromClient, receiveLength, temp->outputFilePtr);
 			fprintf(outputFilePtr, "[   main   ] received %d bytes from client %d\n", receiveLength, connectionCount);
@@ -315,19 +325,16 @@ void handleConnection() {
 			temp->serverSocket = returnSocketToServer(destinationAddressInformation);
 
 			pthread_mutex_lock(&mutex_outputFile);
-
 			printf("[   main   ] established TCP connection with server\n");
-
 			fprintf(temp->outputFilePtr, "[   main   ] established TCP connection with server\n");
-
 			fprintf(outputFilePtr, "[   main   ] established TCP connection with server\n");
-
 			pthread_mutex_unlock(&mutex_outputFile);
 
 			if(isHTTPS)
 			{
 				temp->clientArgs.isHTTPS = true;
 				temp->serverArgs.isHTTPS = true;
+
 				if(sendString(temp->clientSocket, connectionEstablishedResponse, CONNECTION_ESTABLISHED_MESSAGE_LENGTH) == 0)
 				{
 					// clean up code
@@ -340,9 +347,6 @@ void handleConnection() {
 					//cleanupConnections(connections, connectionCount);
 					pthread_mutex_destroy(&mutex_outputFile);
 					fclose(outputFilePtr);
-					if(saveCacheToFile(cachePtr) == -1)
-						printf("error saving cache\n");
-					free(cachePtr);
 					cleanMutexes(mutexes);
 					fatal("sending 200 connection established", functionName, stdout);
 				}
@@ -357,6 +361,7 @@ void handleConnection() {
 					temp->dataFromClientSize = 0;
 				}
 			}
+
 			else
 			{
 				temp->clientArgs.isHTTPS = false;
@@ -381,11 +386,7 @@ void handleConnection() {
 	// clean up code
 	for(int i = 0; i < MAX_CONNECTION_COUNT * 2; i++)
 		pthread_mutex_destroy(&mutexes[i]);
-	
-	if(saveCacheToFile(cachePtr) == -1)
-		printf("error saving cache\n");
 
-	free(cachePtr);
 	//cleanupConnections(connections, connectionCount);
 	fclose(outputFilePtr);
 	cleanMutexes(mutexes);
@@ -393,7 +394,7 @@ void handleConnection() {
 }
 
 /* create, bind, and return a listening socket */
-int returnListeningSocket() 
+int returnListeningSocket()
 {
 	char functionName[] = "returnListeningSocket";
 	struct addrinfo hostAddrHint, *hostResult;
@@ -426,7 +427,7 @@ int returnListeningSocket()
 }
 
 /*
- * create, connect, and return a socket to the client 
+ * create, connect, and return a socket to the client
  * returns -1 for timeout, -2 for error accepting, -3 for error finding client addres information
  */
 int returnSocketToClient(const int listeningSocket)
@@ -435,29 +436,34 @@ int returnSocketToClient(const int listeningSocket)
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec = SERVER_TIMEOUT_VALUE;
-	setsockopt(listeningSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-	int timeoutCount = 0; 
+	setsockopt(listeningSocket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+	int timeoutCount = 0;
 
 	struct sockaddr clientAddress;
 	socklen_t sin_size = sizeof(struct sockaddr);
 	int socketToClient;
+
 	while(1)
 	{
 		if(timeoutCount >= TIMEOUT_COUNT)
 		{
 			return -1;
 		}
+
 		socketToClient = accept(listeningSocket, &clientAddress, &sin_size);
+
 		if(socketToClient == -1)
 		{
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
 				timeoutCount++;
+
 			else
 			{
 				printf("errno %d: ", errno);
 				return -2;
 			}
 		}
+
 		// got connection
 		else
 		{
@@ -466,7 +472,7 @@ int returnSocketToClient(const int listeningSocket)
 	}
 
 	char clientAddressString[INET_ADDRSTRLEN];
-	struct sockaddr_in clientAddress_in = *((struct sockaddr_in*)&clientAddress);
+	struct sockaddr_in clientAddress_in = *((struct sockaddr_in *)&clientAddress);
 
 	if(inet_ntop(AF_INET, &clientAddress_in.sin_addr, clientAddressString, INET_ADDRSTRLEN) == NULL)
 		return -3;
@@ -479,13 +485,13 @@ int returnSocketToClient(const int listeningSocket)
 /* extract the destination name string from the HTTP request */
 /* returns offset of name from start of data, or on error:	-1 when error finding the host string
 															-2 when error finding host name end using domain names */
-int getDestinationName(const unsigned char* receivedData, char* destinationNameBuffer, FILE* outputFilePtr)
+int getDestinationName(const unsigned char *receivedData, char *destinationNameBuffer, FILE *outputFilePtr)
 {
 	char *destinationNameStart, *destinationNameEnd;
 	int destinationNameLength;
 	int domainNameIndex = 0;
 
-	destinationNameStart = strstr((char*)receivedData, "Host: ");
+	destinationNameStart = strstr((char *)receivedData, "Host: ");
 
 	if(destinationNameStart == NULL)
 		return -1;
@@ -514,7 +520,7 @@ int getDestinationName(const unsigned char* receivedData, char* destinationNameB
 	printf("destination name is: %s\n", destinationNameBuffer);
 	fprintf(outputFilePtr, "destination name is: %s\n", destinationNameBuffer);
 	pthread_mutex_unlock(&mutex_outputFile);
-	return (char*)receivedData - destinationNameStart;
+	return (char *)receivedData - destinationNameStart;
 }
 
 /* extract port number from request.
@@ -523,17 +529,17 @@ int getDestinationName(const unsigned char* receivedData, char* destinationNameB
  *		-1: error finding port number end (\r\n)
  *		-2: found port number is not a number
  */
-int getDestinationPort(const unsigned char* destinationNameEnd, char* destinationPortBuffer, const bool isHTTPS, FILE* outputFilePtr)
+int getDestinationPort(const unsigned char *destinationNameEnd, char *destinationPortBuffer, const bool isHTTPS, FILE *outputFilePtr)
 {
 	if(*destinationNameEnd == ':')
 	{
-		char* destinationPortEnd = strstr((char*)destinationNameEnd, "\r\n");
+		char *destinationPortEnd = strstr((char *)destinationNameEnd, "\r\n");
 
 		if(destinationPortEnd == NULL)
 			return -1;
 
-		int destinationPortLength = destinationPortEnd - (char*)destinationNameEnd - 1;
-		strncpy(destinationPortBuffer, (char*)(destinationNameEnd + 1), destinationPortLength);
+		int destinationPortLength = destinationPortEnd - (char *)destinationNameEnd - 1;
+		strncpy(destinationPortBuffer, (char *)(destinationNameEnd + 1), destinationPortLength);
 		destinationPortBuffer[destinationPortLength] = '\0';
 
 		if(!isNumber(destinationPortBuffer))
@@ -554,7 +560,7 @@ int getDestinationPort(const unsigned char* destinationNameEnd, char* destinatio
 }
 
 /* get additional information about the destination */
-struct addrinfo returnDestinationAddressInfo(const char* destinationName, const char* destinationPort, FILE* outputFilePtr)
+struct addrinfo returnDestinationAddressInfo(const char *destinationName, const char *destinationPort, FILE *outputFilePtr)
 {
 	char functionName[] = "returnDestinationAddressInfo";
 	struct addrinfo destinationAddressHint, *destinationAddressResult;
@@ -566,7 +572,7 @@ struct addrinfo returnDestinationAddressInfo(const char* destinationName, const 
 		fatal("getting address information for the destination", functionName, stdout);
 
 	char destinationAddressString[INET_ADDRSTRLEN];
-	struct sockaddr_in destinationAddress_in = *(struct sockaddr_in*)destinationAddressResult->ai_addr;
+	struct sockaddr_in destinationAddress_in = *(struct sockaddr_in *)destinationAddressResult->ai_addr;
 
 	if(inet_ntop(AF_INET, &destinationAddress_in.sin_addr, destinationAddressString, INET_ADDRSTRLEN) == NULL)
 		fatal("converting destination ip address to string", functionName, stdout);
@@ -598,16 +604,16 @@ int returnSocketToServer(const struct addrinfo destinationAddressInformation)
 	return socketToDestination;
 }
 
-bool isConnectMethod(const unsigned char* receivedData)
+bool isConnectMethod(const unsigned char *receivedData)
 {
-	if(strstr((char*)receivedData, "CONNECT ") == NULL)
+	if(strstr((char *)receivedData, "CONNECT ") == NULL)
 		return false;
 
 	else
 		return true;
 }
 
-bool isNumber(const char* stringToCheck)
+bool isNumber(const char *stringToCheck)
 {
 	int stringLength = strlen(stringToCheck);
 
@@ -623,119 +629,39 @@ bool isNumber(const char* stringToCheck)
 	return true;
 }
 
-void* threadFunction(void* args)
+void *threadFunction(void *args)
 {
 	// set up local variables with argument
-	struct threadParameters parameters = *(struct threadParameters*)args;
+	struct threadParameters parameters = *(struct threadParameters *)args;
 	// connection info
 	const int socket = *parameters.socket;
 	const int ID = parameters.connectionID;
-	char connectedTo[NAME_LENGTH + 1];
-	memcpy(connectedTo, parameters.connectedTo, NAME_LENGTH + 1);
-	bool* shutDown = parameters.shutDown;
+	char connectedTo[NAME_LENGTH];
+	memcpy(connectedTo, parameters.connectedTo, NAME_LENGTH);
+	bool *shutDown = parameters.shutDown;
 	bool isHTTPS = parameters.isHTTPS;
 	// read/write buffer info
-	int* readBufferSize = parameters.readBufferSize;
-	int* writeBufferSize = parameters.writeBufferSize;
-	unsigned char* writeBuffer = parameters.writeBuffer;
-	const unsigned char* readBuffer = parameters.readBuffer;
+	int *readBufferSize = parameters.readBufferSize;
+	int *writeBufferSize = parameters.writeBufferSize;
+	unsigned char *writeBuffer = parameters.writeBuffer;
+	const unsigned char *readBuffer = parameters.readBuffer;
 	// file pointers
-	FILE* localOutputFilePtr = parameters.localOutputFilePtr;
-	FILE* globalOutputFilePtr = parameters.globalOutputFilePtr;
+	FILE *localOutputFilePtr = parameters.localOutputFilePtr;
+	FILE *globalOutputFilePtr = parameters.globalOutputFilePtr;
 	// mutex locks
 	pthread_mutex_t *mutex_writeBuffer = parameters.mutex_writeBufferSize;
 	pthread_mutex_t *mutex_readBuffer = parameters.mutex_readBufferSize;
-	// cache info
-	struct requestCache* cachePtr = parameters.cachePtr;
 
 	unsigned char tempReadBuffer[BUFFER_SIZE + 1];
-	char requestedObject[OBJECT_NAME_LENGTH];
-	unsigned char* readFromCache = NULL;
-	int readCount = 0;
 	ssize_t recvResult;
 	bool clientConnected = (connectedTo[0] == 'c') ? (true) : (false);
+
 	// set up timeout
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec = CONNECTION_TIMEOUT_VALUE;
-	setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-	int timeoutCount = 0; 
-
-	int cacheOffset;
-	int cacheOffsetWithData = -1;
-	if(isHTTPS || !clientConnected)
-		cacheOffset = -1;
-	// if not HTTPS && client
-	else 
-	{
-		getRequestedObject(writeBuffer, requestedObject);
-
-		// is a get request
-		if(requestedObject[0] != '\0')
-		{
-			// debug ---------------------------------------
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] found GET request\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] found GET request\n", ID, connectedTo);
-			fprintf(localOutputFilePtr, "[%d - %s] found GET request\n", ID, connectedTo);
-			pthread_mutex_unlock(&mutex_outputFile);
-			// -----------------------------------------------
-
-			readCount = isInCache(cachePtr, requestedObject, &readFromCache);
-			// item in cache
-			if(readCount != 0)
-			{
-				// debug ---------------------------------------
-				// TODO check object name against the one saved in the cache in case of collision
-				cacheOffsetWithData = getHashValue(requestedObject);
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-				dump(readFromCache, readCount, stdout);
-				fprintf(globalOutputFilePtr, "[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-				dump(readFromCache, readCount, globalOutputFilePtr);
-				fprintf(localOutputFilePtr, "[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-				dump(readFromCache, readCount, localOutputFilePtr);
-				pthread_mutex_unlock(&mutex_outputFile);
-				cacheOffsetWithData = -1;
-				// -----------------------------------------------
-
-				sendString(socket, readFromCache, readCount);
-				// reset value after use
-				readCount = 0;
-				readFromCache = NULL;
-
-				// no need to send request to web server
-				pthread_mutex_lock(mutex_writeBuffer);
-				*writeBufferSize = 0;
-				pthread_mutex_unlock(mutex_writeBuffer);
-
-				// set cache offset to -1 indicating no need to cache this request
-				cacheOffset = -1;
-			}
-			else
-			{
-				// debug ---------------------------------------
-				cacheOffsetWithData = getHashValue(requestedObject);
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-				fprintf(globalOutputFilePtr, "[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-				fprintf(localOutputFilePtr, "[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-				pthread_mutex_unlock(&mutex_outputFile);
-				cacheOffsetWithData = -1;
-				// -----------------------------------------------
-
-				cacheOffset = getHashValue(requestedObject);
-				strcpy(cachePtr[cacheOffset].objectName, requestedObject);
-				cachePtr[cacheOffset].objectNameLength = strlen(requestedObject);
-			}
-		}
-		else
-		{
-			cacheOffset = -1;
-		}
-	}
-
-
+	setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+	int timeoutCount = 0;
 
 	while(!(*shutDown))
 	{
@@ -750,6 +676,7 @@ void* threadFunction(void* args)
 			pthread_mutex_unlock(&mutex_outputFile);
 			pthread_exit(NULL);
 		}
+
 		recvResult = recv(socket, tempReadBuffer, BUFFER_SIZE, 0);
 
 		if(recvResult == -1)
@@ -775,7 +702,7 @@ void* threadFunction(void* args)
 		else
 		{
 			timeoutCount = 0;
-			// debug ---------------------
+
 			if(recvResult == 0)
 			{
 				*shutDown = true;
@@ -789,80 +716,11 @@ void* threadFunction(void* args)
 
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			dump(tempReadBuffer, recvResult, stdout);
 			fprintf(globalOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
 			fprintf(localOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
 			dump(tempReadBuffer, recvResult, globalOutputFilePtr);
 			dump(tempReadBuffer, recvResult, localOutputFilePtr);
 			pthread_mutex_unlock(&mutex_outputFile);
-			// ----------------------------
-
-			if(clientConnected)
-			{
-				getRequestedObject(tempReadBuffer, requestedObject);
-
-				// GET request && object found
-				if(requestedObject[0] != '\0')
-				{
-					// debug ---------------------------------------
-					pthread_mutex_lock(&mutex_outputFile);
-					printf("[%d - %s] found GET request\n", ID, connectedTo);
-					fprintf(globalOutputFilePtr, "[%d - %s] found GET request\n", ID, connectedTo);
-					fprintf(localOutputFilePtr, "[%d - %s] found GET request\n", ID, connectedTo);
-					pthread_mutex_unlock(&mutex_outputFile);
-					// -----------------------------------------------
-
-					readCount = isInCache(cachePtr, requestedObject, &readFromCache);
-
-					// TODO this assumes client doesn't request consecutively without getting a response from the server. If it does, data for first request may be sent after the data for the second request.
-					// data is in cache
-					if(readCount != 0)
-					{
-						// debug ---------------------------------------
-						cacheOffsetWithData = getHashValue(requestedObject);
-						pthread_mutex_lock(&mutex_outputFile);
-						printf("[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-						dump(readFromCache, readCount, stdout);
-						fprintf(globalOutputFilePtr, "[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-						dump(readFromCache, readCount, globalOutputFilePtr);
-						fprintf(localOutputFilePtr, "[%d - %s] found %d bytes in cache. Sending reply from cache instead. Offset: %d\n", ID, connectedTo, readCount, cacheOffsetWithData);
-						dump(readFromCache, readCount, localOutputFilePtr);
-						pthread_mutex_unlock(&mutex_outputFile);
-						cacheOffsetWithData = -1;
-						// -----------------------------------------------
-
-						sendString(socket, readFromCache, readCount);
-						// reset value after use
-						readCount = 0;
-						readFromCache = NULL;
-
-						// set cache offset to -1 indicating no need to cache this request
-						cacheOffset = -1;
-
-						// don't write to buffer
-						continue;
-					}
-
-					// data not cached, set up parameters so it is cached upon reception
-					else
-					{
-						// debug ---------------------------------------
-						cacheOffsetWithData = getHashValue(requestedObject);
-						pthread_mutex_lock(&mutex_outputFile);
-						printf("[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-						fprintf(globalOutputFilePtr, "[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-						fprintf(localOutputFilePtr, "[%d - %s] response not cached. Setting cacheOffset: %d\n", ID, connectedTo, cacheOffsetWithData);
-						pthread_mutex_unlock(&mutex_outputFile);
-						cacheOffsetWithData = -1;
-						// -----------------------------------------------
-						cacheOffset = getHashValue(requestedObject);
-						strcpy(cachePtr[cacheOffset].objectName, requestedObject);
-						cachePtr[cacheOffset].objectNameLength = strlen(requestedObject);
-					}
-				}
-
-				requestedObject[0] = '\0';
-			}
 
 			// wait until buffer is empty before writing to it
 			while(*writeBufferSize != 0) {};
@@ -876,7 +734,6 @@ void* threadFunction(void* args)
 
 			pthread_mutex_unlock(mutex_writeBuffer);
 
-			// debug ----------------------------------
 			pthread_mutex_lock(&mutex_outputFile);
 
 			printf("[%d - %s] Wrote %ld bytes\n", ID, connectedTo, recvResult);
@@ -891,20 +748,6 @@ void* threadFunction(void* args)
 		// if there is data in the read buffer, send it
 		if(*readBufferSize != 0)
 		{
-			// cache first if cache offset is not -1;
-			if(clientConnected && cacheOffset != -1)
-			{
-				saveToCache(cachePtr + cacheOffset, readBuffer, *readBufferSize);
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] saved to cache with offset %d:\n", ID, connectedTo, cacheOffset);
-				dump(readBuffer, *readBufferSize, stdout);
-				fprintf(globalOutputFilePtr, "[%d - %s] saved to cache with offset %d:\n", ID, connectedTo, cacheOffset);
-				dump(readBuffer, *readBufferSize, globalOutputFilePtr);
-				fprintf(localOutputFilePtr, "[%d - %s] saved to cache with offset %d:\n", ID, connectedTo, cacheOffset);
-				dump(readBuffer, *readBufferSize, localOutputFilePtr);
-				pthread_mutex_unlock(&mutex_outputFile);
-			}
-
 			if(sendString(socket, readBuffer, *readBufferSize) == 0)
 			{
 				pthread_mutex_lock(&mutex_outputFile);
@@ -916,25 +759,21 @@ void* threadFunction(void* args)
 				pthread_exit(NULL);
 			}
 
-			// debug ----------------------
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Sent data\n", ID, connectedTo);
 			fprintf(globalOutputFilePtr, "[%d - %s] Sent data\n", ID, connectedTo);
 			fprintf(localOutputFilePtr, "[%d - %s] Sent data\n", ID, connectedTo);
 			pthread_mutex_unlock(&mutex_outputFile);
-			// ---------------------------
 
 			pthread_mutex_lock(mutex_readBuffer);
 			*readBufferSize = 0;
 			pthread_mutex_unlock(mutex_readBuffer);
 
-			// debug ---------------------------
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Set buffer to empty\n", ID, connectedTo);
 			fprintf(globalOutputFilePtr, "[%d - %s] Set buffer to empty\n", ID, connectedTo);
 			fprintf(localOutputFilePtr, "[%d - %s] Set buffer to empty\n", ID, connectedTo);
 			pthread_mutex_unlock(&mutex_outputFile);
-			// ------------------------------
 		}
 	}
 
@@ -948,14 +787,14 @@ void* threadFunction(void* args)
 	pthread_exit(NULL);
 }
 
-void* listeningThreadFunction(void* args)
+void *listeningThreadFunction(void *args)
 {
-	struct listeningThreadParameters parameter = *(struct listeningThreadParameters*)args;
+	struct listeningThreadParameters parameter = *(struct listeningThreadParameters *)args;
 	int listeningSocket = parameter.listeningSocket;
-	int* acceptedSocket = parameter.acceptedSocket;
-	bool* acceptedSocketPending = parameter.acceptedSocketPending;
-	bool* shutDown = parameter.shutDown;
-	pthread_mutex_t* mutex_acceptedSocket = parameter.mutex_acceptedSocket;
+	int *acceptedSocket = parameter.acceptedSocket;
+	bool *acceptedSocketPending = parameter.acceptedSocketPending;
+	bool *shutDown = parameter.shutDown;
+	pthread_mutex_t *mutex_acceptedSocket = parameter.mutex_acceptedSocket;
 
 	int tempAcceptedSocket = 0;
 
@@ -965,18 +804,21 @@ void* listeningThreadFunction(void* args)
 	{
 		if(tempAcceptedSocket == 0)
 			tempAcceptedSocket = returnSocketToClient(listeningSocket);
+
 		if(tempAcceptedSocket == -1)
 		{
 			printf("[ listener ] accepting connection timed out\n");
 			*shutDown = true;
 			continue;
 		}
+
 		else if(tempAcceptedSocket == -2)
 		{
 			printf("[ listener ] error while accepting connection\n");
 			*shutDown = true;
 			continue;
 		}
+
 		else if(tempAcceptedSocket == -3)
 		{
 			printf("[ listener ] error finding client address information\n");
@@ -1010,9 +852,9 @@ void* listeningThreadFunction(void* args)
 	pthread_exit(NULL);
 }
 
-void cleanupConnections(struct connectionResources* conRes, int connectionCount)
+void cleanupConnections(struct connectionResources *conRes, int connectionCount)
 {
-	void* retval;
+	void *retval;
 	int result;
 
 	for(int i = 0; i < connectionCount; i++)
@@ -1031,34 +873,15 @@ void cleanupConnections(struct connectionResources* conRes, int connectionCount)
 	}
 }
 
-/*
- * requested object has to be null terminated
- * change to start from after "http://" to skip redundant calculations
- */
-int getHashValue(const char* requestedObject)
+void getRequestedObject(const unsigned char *requestMessage, char *requestedObject)
 {
-	int nameLength = strlen(requestedObject);
-	int hashValue = 0;
-
-	for(int i = 0; i < nameLength; i++)
-	{
-		hashValue += tolower(requestedObject[i]) -  'a';
-		hashValue *= 31;
-		hashValue %= CACHE_SIZE;
-	}
-
-	return hashValue;
-}
-
-void getRequestedObject(const unsigned char* requestMessage, char* requestedObject)
-{
-	if(strstr((char*)requestMessage, "GET ") == NULL)
+	if(strstr((char *)requestMessage, "GET ") == NULL)
 	{
 		requestedObject[0] = '\0';
 		return;
 	}
 
-	char* requestedObjectEnd = strstr((char*)requestMessage, " HTTP/");
+	char *requestedObjectEnd = strstr((char *)requestMessage, " HTTP/");
 
 	if(requestedObjectEnd == NULL)
 	{
@@ -1068,81 +891,9 @@ void getRequestedObject(const unsigned char* requestMessage, char* requestedObje
 
 	else
 	{
-		int nameLength = requestedObjectEnd - (char*)requestMessage;
-		strncpy(requestedObject, (char*)requestMessage, nameLength);
+		int nameLength = requestedObjectEnd - (char *)requestMessage;
+		strncpy(requestedObject, (char *)requestMessage, nameLength);
 		requestedObject[nameLength] = '\0';
 		return;
 	}
-}
-
-void saveToCache(struct requestCache *cachePtr, const unsigned char* dataToCache, int dataLength)
-{
-	memcpy(cachePtr->value + cachePtr->valueLength, dataToCache, dataLength);
-	cachePtr->valueLength += dataLength;
-}
-
-int isInCache(struct requestCache *cachePtr, const char* requestedObject, unsigned char** copyDestination)
-{
-	int key = getHashValue(requestedObject);
-
-	if(cachePtr[key].valueLength != 0)
-	{
-		*copyDestination = cachePtr[key].value;
-		return cachePtr[key].valueLength;
-	}
-
-	else
-	{
-		copyDestination = NULL;
-		return 0;
-	}
-}
-
-int saveCacheToFile(struct requestCache *cachePtr)
-{
-	FILE* cacheMetadata = NULL;
-	cacheMetadata = fopen(CACHE_METADATA_FILE_NAME, "w");
-	if(cacheMetadata == NULL)
-		return -1;
-	FILE* cacheFile = NULL;
-	cacheFile = fopen(CACHE_FILE_NAME, "w");
-	if(cacheFile == NULL)
-		return -1;
-	
-	for(int i = 0;i<CACHE_SIZE;i++)
-	{
-		fprintf(cacheMetadata, "%d\n%s\n%d\n", cachePtr[i].objectNameLength, cachePtr[i].objectName, cachePtr[i].valueLength);
-		fwrite(cachePtr[i].value, sizeof(unsigned char), cachePtr[i].valueLength, cacheFile);
-	}
-
-	fclose(cacheMetadata);
-	fclose(cacheFile);
-	return 0;
-}
-
-int readCacheFromFile(struct requestCache *cachePtr)
-{
-	FILE* cacheMetadata = NULL;
-	cacheMetadata = fopen(CACHE_METADATA_FILE_NAME, "r");
-	if(cacheMetadata == NULL)
-		return -1;
-	FILE* cacheFile = NULL;
-	cacheFile = fopen(CACHE_FILE_NAME, "r");
-	if(cacheFile == NULL)
-		return -1;
-	
-	for(int i = 0;i<CACHE_SIZE;i++)
-	{
-		fscanf(cacheMetadata, "%d", &cachePtr[i].objectNameLength);
-		// advance offset by 1
-		getc(cacheMetadata);
-		fread(cachePtr[i].objectName, sizeof(char), cachePtr[i].objectNameLength + 1, cacheMetadata);
-		cachePtr[i].objectName[cachePtr[i].objectNameLength] = '\0';
-		fscanf(cacheMetadata, "%d", &cachePtr[i].valueLength);
-		fread(cachePtr[i].value, sizeof(unsigned char), cachePtr[i].valueLength, cacheFile);
-	}
-
-	fclose(cacheMetadata);
-	fclose(cacheFile);
-	return 0;
 }

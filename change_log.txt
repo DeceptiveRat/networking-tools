@@ -22,8 +22,19 @@ Version 1.1
 7. the raw bytes of a packet is dumped to a different file now.
 
 Version 2.0
-1. Added a C proxy server
+1. added a C proxy server
 	1.1 changed some things to make it compatible with code from the packet sniffer
 2. created separate directories for each tool
 	2.1 the include directory contains common code files
 
+Version 2.1
+1. removed caching feature from
+	1.1 file: /include/socketFunctions.c
+	1.2 file: /include/socketFunctions.h
+2. added .man files for each header file in /include
+3. fixed license headers on all files
+4. bulk_print function added, file: /include/otherFunctions.h, but not used yet due to: less flexibility, no way to print integers
+5. packets are no longer dumped to the standard output for more readability
+6. logs are now saved to path: /Internet Simulator/logs/
+7. added "itoa" function, file:/include/otherFunctions.h
+8. added "compile.sh", path: /Internet Simulator/ path: /Packet Sniffer/, for easy compiling
