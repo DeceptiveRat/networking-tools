@@ -38,3 +38,7 @@ Version 2.1
 6. logs are now saved to path: /Internet Simulator/logs/
 7. added "itoa" function, file:/include/otherFunctions.h
 8. added "compile.sh", path: /Internet Simulator/ path: /Packet Sniffer/, for easy compiling
+
+Version 2.1.1
+1. corrected README.md
+2. removed binary iSim

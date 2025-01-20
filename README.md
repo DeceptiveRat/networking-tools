@@ -1,4 +1,4 @@
-### Simple Packet Sniffer
+# Simple Packet Sniffer
 ## 1 Description
 Toy project to help myself learn/practice:
 - socket programming
@@ -13,7 +13,7 @@ sudo ./packetSniffer
 ```
 to run the sniffer
 
-### Internet Simulator
+# Internet Simulator
 ## 1 Description
 Network faker to trick malware into thinking it is connected to the internet.
 
@@ -22,9 +22,9 @@ Navigate to the Internet Simulator directory
 
 ```bash 
 ./compile.sh
-sudo ./iSim
+./iSim
 ```
-to run the sniffer
+to run the simulator
 
-### License 
+# License 
 This project is licensed under the GNU General Public License v3. See the [LICENSE](LICENSE) file for details.
