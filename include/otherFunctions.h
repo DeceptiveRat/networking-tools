@@ -16,6 +16,7 @@
  */
 
 #pragma once
+#include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -61,3 +62,7 @@ void itoa(const int number, char* destination);
 
 // debugging functions
 int hex_stream_to_bytes(char *fileName, unsigned char **packet);
+
+// mutex functions
+pthread_mutex_t* setupMutexes(int mutexCount);
+void cleanMutexes(pthread_mutex_t* mutexes, int mutexCount);

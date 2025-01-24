@@ -298,6 +298,7 @@ void fatal(const char *message, const char *location, FILE *outputFilePtr)
 
 	if(outputFilePtr != NULL)
 		fprintf(outputFilePtr, "%s\nerrno: %d", error_message, errno);
+
 	exit(-1);
 }
 
@@ -307,16 +308,19 @@ void bulk_print(const struct FILE_POINTERS files, int argCount, ...)
 	va_list args;
 	va_start(args, argCount);
 	char string[MAX_STRING_LENGTH];
-	for(int j = 0;j<argCount;j++)
+
+	for(int j = 0; j < argCount; j++)
 	{
-		strcpy(string, va_arg(args, char*));
-		for(int i = 0;i<files.count;i++)
+		strcpy(string, va_arg(args, char *));
+
+		for(int i = 0; i < files.count; i++)
 			fprintf(files.pointers[i], "%s", string);
 	}
+
 	va_end(args);
 }
 
-void itoa(const int number, char* destination)
+void itoa(const int number, char *destination)
 {
 	if(number == 0)
 	{
@@ -324,9 +328,12 @@ void itoa(const int number, char* destination)
 		destination[1] = '\0';
 		return;
 	}
-	int digitCount = floor(log(number)/log(10)) + 1;
-	for(int i = 0;i<digitCount;i++)
-		destination[i] = (number/((int)pow(10, digitCount - 1 - i)) %10) + '0';
+
+	int digitCount = floor(log(number) / log(10)) + 1;
+
+	for(int i = 0; i < digitCount; i++)
+		destination[i] = (number / ((int)pow(10, digitCount - 1 - i)) % 10) + '0';
+
 	destination[digitCount] = '\0';
 }
 
@@ -364,4 +371,33 @@ int hex_stream_to_bytes(char *fileName, unsigned char **packet)
 	*packet = bytes;
 
 	return stream_length / 2;
+}
+
+pthread_mutex_t *setupMutexes(int mutexCount)
+{
+	char functionName[] = "setupMutexes";
+	pthread_mutex_t *mutexList = NULL;
+	mutexList = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * mutexCount);
+
+	if(mutexList == NULL)
+		fatal("creating mutexes", functionName, stdout);
+
+	for(int i = 0; i < mutexCount; i++)
+	{
+		if(pthread_mutex_init(&mutexList[i], NULL) != 0)
+			fatal("initializing mutexes", functionName, stdout);
+	}
+
+	return mutexList;
+}
+
+void cleanMutexes(pthread_mutex_t *mutexes, int mutexCount)
+{
+	for(int i = 0; i < mutexCount; i++)
+	{
+		if(pthread_mutex_destroy(&mutexes[i]) != 0)
+			fatal("destroying mutexes", "cleanMutexes", stdout);
+	}
+
+	free(mutexes);
 }

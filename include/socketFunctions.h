@@ -24,20 +24,12 @@
 #include <netdb.h>
 
 #define NAME_LENGTH 7
-#define OUTPUT_FILE_NAME_LENGTH 40
-#define OUTPUT_FILE_PATH "logs/"
 #define BUFFER_SIZE 4096
-#define DESTINATION_NAME_LENGTH 100
-#define DESTINATION_PORT_LENGTH 5
-#define PORT "7890"
+#define LISTENING_PORT "7890"
 #define MAX_CONNECTION_COUNT 11
-#define CONNECTION_ESTABLISHED_MESSAGE_LENGTH 39
+#define TIMEOUT_COUNT 20000
 #define DOMAIN_NAME_LENGTH 6
 #define DOMAIN_NAME_COUNT 7
-#define DOMAIN_NAME_FILE_NAME "domains.txt"
-#define SERVER_TIMEOUT_VALUE 2
-#define CONNECTION_TIMEOUT_VALUE 2
-#define TIMEOUT_COUNT 20000
 
 struct threadParameters
 {
@@ -46,7 +38,6 @@ struct threadParameters
 	int connectionID;
 	char connectedTo[NAME_LENGTH];
 	bool* shutDown;
-	bool isHTTPS;
 
 	// read/write buffer info
 	int* writeBufferSize;
@@ -101,14 +92,24 @@ struct connectionResources
 	FILE* outputFilePtr;
 };
 
+struct whitelistStructure
+{
+	char** IPAddresses;
+	int IPAddressCount;
+	char** ports;
+	int portCount;
+	char** hostnames;
+	int hostnameCount;
+};
+
 // setup functions
 void setDomainNames();
 void setupConnectionResources(struct connectionResources* connections, int connectionCount, FILE* globalOutputFilePtr);
-pthread_mutex_t* setupMutexes();
+void setupWhitelist(struct whitelistStructure* whitelist);
 
 // action function
 void handleConnection();
-void handle_alarm(int sig);
+void loadDefaultHTML(unsigned char* buffer);
 
 // return sockets
 int returnListeningSocket();
@@ -119,13 +120,15 @@ int returnSocketToServer(const struct addrinfo destinationAddressInformation);
 int getDestinationName(const unsigned char* receivedData, char* destinationNameBuffer, FILE* outputFilePtr);
 int getDestinationPort(const unsigned char* destinationNameEnd, char* destinationPortBuffer, const bool isHTTPS, FILE* outputFilePtr);
 struct addrinfo returnDestinationAddressInfo(const char* destinationName, const char* destinationPort, FILE* outputFilePtr);
-bool isConnectMethod(const unsigned char* receivedData); 
+
+// verifying functions
 bool isNumber(const char* stringToCheck);
+bool isWhitelisted(const struct whitelistStructure whitelist, const char* destinationName, const char* destinationPort, const struct addrinfo addressInfo);
 
 // thread functions
-void* threadFunction(void* args);
+void* whitelistedThreadFunction(void* args);
 void* listeningThreadFunction(void* args);
+void* blacklistedThreadFunction(void* args);
 
 // clean up functions
 void cleanupConnections(struct connectionResources *conRes, int connectionCount);
-void cleanMutexes(pthread_mutex_t* mutexes);

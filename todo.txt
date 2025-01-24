@@ -1,4 +1,4 @@
-### Packet Sniffer
+# Packet Sniffer
 - need to verify if the pointer list functions are working properly
 - current pointer list implementation makes it so that the head contains no pointer. Change it 
 - change all print byte orders so they match wireshark output. Also, add hexadecimal notation not just decimal notation
@@ -13,7 +13,7 @@
 - IP length can vary as well
 - detect other protocols, i.e. HTTP, ICMP, SMTP, etc
 
-### Internet Simulator
+# Internet Simulator
 ## change of purpose:
 	used to be a proxy server with the purpose of hiding the end user from the server
 	now a tool to view the exchanges between a program(malware) and the server(C2 server), much like burpsuite
@@ -21,16 +21,21 @@
 
 ## clean up code:
 - change multiple fprintf and printfs to one function 
-- move functions to different files if possible
+- move functions to different files
 
 ## add new feature:
 - need to be able to let some packets through
-	- log responses from servers
-	- choose to let the responses through or not?
+	- option to log responses from servers
+	- option to not let reponse through
 - create standard response 
 	- one each for html, html + js, etc?
 - improve the bulk_print function
-
+- evaluate the need for isHTTPS variable in thread parameter
+- if the program isn't connected to the internet, there will be an error trying to find the domain name
+- the name client should be changed
+- create cleanup header that contains all cleanup functions
+- use cleanupConnections function
+- print whitelist, add to whitelist while running program
 
 - Change README.md to reflect new changes
 - Change the license header in each file

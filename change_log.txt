@@ -42,3 +42,26 @@ Version 2.1
 Version 2.1.1
 1. corrected README.md
 2. removed binary iSim
+
+Version 2.2
+1. moved functions "setupMutexes" "cleanMutexes" to /include/otherFunctions.h
+2. moved some macros to the start of the functions that use them
+3. added whitelist implementation
+	3.1 new: "setupWhitelist"
+	3.2 new: "whitelistStructure"
+	3.3 rename: "threadFunction" => "whitelistedThreadFunction"
+	3.4 created generic "threadFunction" that can contain both thread functions
+4. remove "DOMAIN_NAME_FILE_NAME"
+5. removed redundant mutex cleanup code in "handleConnection"
+6. when sending an HTTPS connection request to the server fails, instead of the program terminating, that one connection is terminated
+7. specific connection files now only contain exchange logs, and no debugging details such as connection established messages
+	7.1 one exception is the "read %ld bytes" string
+8. the "all exchanges.log" file now contains no packet dumps and only contains debugging information for each connection. It will also be renamed "connections.dbg"
+9. removed HTTPS related code since there won't be any CONNECT requests
+10. removed "getDestinationPort" since the listening port will be the destination port
+11. rename PORT => LISTENING_PORT
+12. etc code cleanups
+	12.1 removed redundant parentheses when creating threads in "handleConnection"
+13. added blacklist handling functions
+	13.1 new: "loadDefaultHTML"
+	13.2 new: "blacklistedThreadFunction"
