@@ -25,11 +25,13 @@
 
 #define NAME_LENGTH 7
 #define BUFFER_SIZE 4096
-#define LISTENING_PORT "7890"
-#define MAX_CONNECTION_COUNT 11
+#define LISTENING_PORT "8080"
+#define MAX_CONNECTION_COUNT 2
 #define TIMEOUT_COUNT 20000
 #define DOMAIN_NAME_LENGTH 6
 #define DOMAIN_NAME_COUNT 7
+#define RESPONSE_HEADER_COUNT 10
+#define RESPONSE_NO_PAYLOAD 0x1
 
 struct threadParameters
 {
@@ -46,8 +48,8 @@ struct threadParameters
 	unsigned char* readBuffer;
 
 	// file pointers
-	FILE* localOutputFilePtr;
-	FILE* globalOutputFilePtr;
+	FILE* outputFilePtr;
+	FILE* debugFilePtr;
 
 	// mutex locks
 	// TODO: mutex lock isn't needed. writing writeBufferSize only happens when the size is 0. writing readBufferSize only happens when the size is not 0. Change later and see if it still works
@@ -102,14 +104,28 @@ struct whitelistStructure
 	int hostnameCount;
 };
 
+struct header
+{
+	char* headerName;
+	char* headerData;
+};
+
+struct HTTPResponse
+{
+	char responseVersion[9];
+	char statusCode[7];
+	struct header headers[];
+};
+
 // setup functions
 void setDomainNames();
 void setupConnectionResources(struct connectionResources* connections, int connectionCount, FILE* globalOutputFilePtr);
 void setupWhitelist(struct whitelistStructure* whitelist);
+void setupResponse(struct HTTPResponse** destination, int options);
 
 // action function
 void handleConnection();
-void loadDefaultHTML(unsigned char* buffer);
+int sendResponse(int socket, const int options, const char* fileType, char* writeBuffer, const struct HTTPResponse* response, FILE* outputFilePtr);
 
 // return sockets
 int returnListeningSocket();
@@ -120,6 +136,8 @@ int returnSocketToServer(const struct addrinfo destinationAddressInformation);
 int getDestinationName(const unsigned char* receivedData, char* destinationNameBuffer, FILE* outputFilePtr);
 int getDestinationPort(const unsigned char* destinationNameEnd, char* destinationPortBuffer, const bool isHTTPS, FILE* outputFilePtr);
 struct addrinfo returnDestinationAddressInfo(const char* destinationName, const char* destinationPort, FILE* outputFilePtr);
+int getHTTPRequestType(const char* receivedData);
+void getRequestedObject(const unsigned char *requestMessage, char *requestedObject);
 
 // verifying functions
 bool isNumber(const char* stringToCheck);

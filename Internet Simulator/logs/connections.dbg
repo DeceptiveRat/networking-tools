@@ -1,0 +1,54 @@
+[   main   ] new connection made
+[   main   ] received 363 bytes from client 0
+47 45 54 20 2f 20 48 54 54 50 2f 31 2e 31 0d 0a  | G E T   /   H T T P / 1 . 1 , , 
+48 6f 73 74 3a 20 68 74 74 70 66 6f 72 65 76 65  | H o s t :   h t t p f o r e v e 
+72 2e 63 6f 6d 0d 0a 55 73 65 72 2d 41 67 65 6e  | r . c o m , , U s e r - A g e n 
+74 3a 20 4d 6f 7a 69 6c 6c 61 2f 35 2e 30 20 28  | t :   M o z i l l a / 5 . 0   ( 
+58 31 31 3b 20 55 62 75 6e 74 75 3b 20 4c 69 6e  | X 1 1 ;   U b u n t u ;   L i n 
+75 78 20 78 38 36 5f 36 34 3b 20 72 76 3a 31 33  | u x   x 8 6 _ 6 4 ;   r v : 1 3 
+34 2e 30 29 20 47 65 63 6b 6f 2f 32 30 31 30 30  | 4 . 0 )   G e c k o / 2 0 1 0 0 
+31 30 31 20 46 69 72 65 66 6f 78 2f 31 33 34 2e  | 1 0 1   F i r e f o x / 1 3 4 . 
+30 0d 0a 41 63 63 65 70 74 3a 20 74 65 78 74 2f  | 0 , , A c c e p t :   t e x t / 
+68 74 6d 6c 2c 61 70 70 6c 69 63 61 74 69 6f 6e  | h t m l , a p p l i c a t i o n 
+2f 78 68 74 6d 6c 2b 78 6d 6c 2c 61 70 70 6c 69  | / x h t m l + x m l , a p p l i 
+63 61 74 69 6f 6e 2f 78 6d 6c 3b 71 3d 30 2e 39  | c a t i o n / x m l ; q = 0 . 9 
+2c 2a 2f 2a 3b 71 3d 30 2e 38 0d 0a 41 63 63 65  | , * / * ; q = 0 . 8 , , A c c e 
+70 74 2d 4c 61 6e 67 75 61 67 65 3a 20 65 6e 2d  | p t - L a n g u a g e :   e n - 
+55 53 2c 65 6e 3b 71 3d 30 2e 35 0d 0a 41 63 63  | U S , e n ; q = 0 . 5 , , A c c 
+65 70 74 2d 45 6e 63 6f 64 69 6e 67 3a 20 67 7a  | e p t - E n c o d i n g :   g z 
+69 70 2c 20 64 65 66 6c 61 74 65 0d 0a 44 4e 54  | i p ,   d e f l a t e , , D N T 
+3a 20 31 0d 0a 53 65 63 2d 47 50 43 3a 20 31 0d  | :   1 , , S e c - G P C :   1 , 
+0a 43 6f 6e 6e 65 63 74 69 6f 6e 3a 20 6b 65 65  | , C o n n e c t i o n :   k e e 
+70 2d 61 6c 69 76 65 0d 0a 55 70 67 72 61 64 65  | p - a l i v e , , U p g r a d e 
+2d 49 6e 73 65 63 75 72 65 2d 52 65 71 75 65 73  | - I n s e c u r e - R e q u e s 
+74 73 3a 20 31 0d 0a 50 72 69 6f 72 69 74 79 3a  | t s :   1 , , P r i o r i t y : 
+20 75 3d 30 2c 20 69 0d 0a 0d 0a                 |   u = 0 ,   i , , , , 
+
+destination name is: httpforever.com
+destination ip address: 146.190.62.39
+[0 #0] Successfully sent response
+[   main   ] new connection made
+[   main   ] received 381 bytes from client 1
+47 45 54 20 2f 66 61 76 69 63 6f 6e 2e 69 63 6f  | G E T   / f a v i c o n . i c o 
+20 48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a  |   H T T P / 1 . 1 , , H o s t : 
+20 68 74 74 70 66 6f 72 65 76 65 72 2e 63 6f 6d  |   h t t p f o r e v e r . c o m 
+0d 0a 55 73 65 72 2d 41 67 65 6e 74 3a 20 4d 6f  | , , U s e r - A g e n t :   M o 
+7a 69 6c 6c 61 2f 35 2e 30 20 28 58 31 31 3b 20  | z i l l a / 5 . 0   ( X 1 1 ;   
+55 62 75 6e 74 75 3b 20 4c 69 6e 75 78 20 78 38  | U b u n t u ;   L i n u x   x 8 
+36 5f 36 34 3b 20 72 76 3a 31 33 34 2e 30 29 20  | 6 _ 6 4 ;   r v : 1 3 4 . 0 )   
+47 65 63 6b 6f 2f 32 30 31 30 30 31 30 31 20 46  | G e c k o / 2 0 1 0 0 1 0 1   F 
+69 72 65 66 6f 78 2f 31 33 34 2e 30 0d 0a 41 63  | i r e f o x / 1 3 4 . 0 , , A c 
+63 65 70 74 3a 20 69 6d 61 67 65 2f 61 76 69 66  | c e p t :   i m a g e / a v i f 
+2c 69 6d 61 67 65 2f 77 65 62 70 2c 69 6d 61 67  | , i m a g e / w e b p , i m a g 
+65 2f 70 6e 67 2c 69 6d 61 67 65 2f 73 76 67 2b  | e / p n g , i m a g e / s v g + 
+78 6d 6c 2c 69 6d 61 67 65 2f 2a 3b 71 3d 30 2e  | x m l , i m a g e / * ; q = 0 . 
+38 2c 2a 2f 2a 3b 71 3d 30 2e 35 0d 0a 41 63 63  | 8 , * / * ; q = 0 . 5 , , A c c 
+65 70 74 2d 4c 61 6e 67 75 61 67 65 3a 20 65 6e  | e p t - L a n g u a g e :   e n 
+2d 55 53 2c 65 6e 3b 71 3d 30 2e 35 0d 0a 41 63  | - U S , e n ; q = 0 . 5 , , A c 
+63 65 70 74 2d 45 6e 63 6f 64 69 6e 67 3a 20 67  | c e p t - E n c o d i n g :   g 
+7a 69 70 2c 20 64 65 66 6c 61 74 65 0d 0a 52 65  | z i p ,   d e f l a t e , , R e 
+66 65 72 65 72 3a 20 68 74 74 70 3a 2f 2f 68 74  | f e r e r :   h t t p : / / h t 
+74 70 66 6f 72 65 76 65 72 2e 63 6f 6d 2f 0d 0a  | t p f o r e v e r . c o m / , , 
+44 4e 54 3a 20 31 0d 0a 53 65 63 2d 47 50 43 3a  | D N T :   1 , , S e c - G P C : 
+20 31 0d 0a 43 6f 6e 6e 65 63 74 69 6f 6e 3a 20  |   1 , , C o n n e c t i o n :   
+6b 65 65 70 2d 61 6c 69 76 65 0d 0a 50 72 69 6f  | k e e p

@@ -48,7 +48,7 @@ void setDomainNames()
 	fclose(domainNameFile);
 }
 
-void setupConnectionResources(struct connectionResources *connections, int connectionCount, FILE *globalOutputFilePtr)
+void setupConnectionResources(struct connectionResources *connections, int connectionCount, FILE *debugFilePtr)
 {
 #define OUTPUT_FILE_NAME_LENGTH 40
 #define OUTPUT_FILE_PATH "logs/"
@@ -59,7 +59,6 @@ void setupConnectionResources(struct connectionResources *connections, int conne
 		char fileName[OUTPUT_FILE_NAME_LENGTH];
 		char filepath[] = OUTPUT_FILE_PATH;
 		char connectionNumber[5];
-		int filepath_length = strlen(filepath);
 		strcpy(fileName, filepath);
 		strcat(fileName, "connection ");
 		itoa(i + 1, connectionNumber);
@@ -85,8 +84,8 @@ void setupConnectionResources(struct connectionResources *connections, int conne
 		connections[i].serverArgs.writeBuffer = connections[i].dataFromServer;
 		connections[i].serverArgs.readBuffer = connections[i].dataFromClient;
 		// file pointers
-		connections[i].serverArgs.localOutputFilePtr = outputFilePtr;
-		connections[i].serverArgs.globalOutputFilePtr = globalOutputFilePtr;
+		connections[i].serverArgs.outputFilePtr = outputFilePtr;
+		connections[i].serverArgs.debugFilePtr = debugFilePtr;
 		// mutex locks
 		connections[i].serverArgs.mutex_writeBufferSize = &connections[i].mutex_dataFromServerSize;
 		connections[i].serverArgs.mutex_readBufferSize = &connections[i].mutex_dataFromClientSize;
@@ -103,8 +102,8 @@ void setupConnectionResources(struct connectionResources *connections, int conne
 		connections[i].clientArgs.writeBuffer = connections[i].dataFromClient;
 		connections[i].clientArgs.readBuffer = connections[i].dataFromServer;
 		// file pointers
-		connections[i].clientArgs.localOutputFilePtr = outputFilePtr;
-		connections[i].clientArgs.globalOutputFilePtr = globalOutputFilePtr;
+		connections[i].clientArgs.outputFilePtr = outputFilePtr;
+		connections[i].clientArgs.debugFilePtr = debugFilePtr;
 		// mutex locks
 		connections[i].clientArgs.mutex_writeBufferSize = &connections[i].mutex_dataFromClientSize;
 		connections[i].clientArgs.mutex_readBufferSize = &connections[i].mutex_dataFromServerSize;
@@ -125,10 +124,10 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 	// read ip addresses
 	fgets(stringRead, 100, whitelistFile);
 
-	if(strcmp(stringRead, "IP address") != 0)
+	if(strcmp(stringRead, "IP address\n") != 0)
 		fatal("finding IP address start", functionName, stdout);
 
-	fscanf(whitelistFile, "%s %d", stringRead, &count);
+	fscanf(whitelistFile, "%s %d\n", stringRead, &count);
 	whitelist->IPAddressCount = count;
 	whitelist->IPAddresses = (char **)malloc(sizeof(char *)*count);
 
@@ -138,7 +137,7 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 	for(int i = 0; i < count; i++)
 	{
 		int length;
-		fscanf(whitelistFile, "%s", stringRead);
+		fscanf(whitelistFile, "%s\n", stringRead);
 		length = strlen(stringRead);
 		whitelist->IPAddresses[i] = (char*)malloc(sizeof(char)*length);
 		strcpy(whitelist->IPAddresses[i], stringRead);
@@ -146,10 +145,10 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 
 	// read ports
 	fgets(stringRead, 100, whitelistFile);
-	if(strcmp(stringRead, "Ports") != 0)
+	if(strcmp(stringRead, "Ports\n") != 0)
 		fatal("finding ports start", functionName, stdout);
 	
-	fscanf(whitelistFile, "%s %d", stringRead, &count);
+	fscanf(whitelistFile, "%s %d\n", stringRead, &count);
 	whitelist->portCount = count;
 	whitelist->ports = (char **)malloc(sizeof(char *)*count);
 
@@ -159,7 +158,7 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 	for(int i = 0; i < count; i++)
 	{
 		int length;
-		fscanf(whitelistFile, "%s", stringRead);
+		fscanf(whitelistFile, "%s\n", stringRead);
 		length = strlen(stringRead);
 		whitelist->ports[i] = (char*)malloc(sizeof(char)*length);
 		strcpy(whitelist->ports[i], stringRead);
@@ -167,10 +166,10 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 
 	// read hostnames
 	fgets(stringRead, 100, whitelistFile);
-	if(strcmp(stringRead, "Hostnames") != 0)
+	if(strcmp(stringRead, "Hostnames\n") != 0)
 		fatal("finding hostnames start", functionName, stdout);
 	
-	fscanf(whitelistFile, "%s %d", stringRead, &count);
+	fscanf(whitelistFile, "%s %d\n", stringRead, &count);
 	whitelist->hostnameCount = count;
 	whitelist->hostnames = (char **)malloc(sizeof(char *)*count);
 
@@ -180,7 +179,7 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 	for(int i = 0; i < count; i++)
 	{
 		int length;
-		fscanf(whitelistFile, "%s", stringRead);
+		fscanf(whitelistFile, "%s\n", stringRead);
 		length = strlen(stringRead);
 		whitelist->hostnames[i] = (char*)malloc(sizeof(char)*length);
 		strcpy(whitelist->hostnames[i], stringRead);
@@ -211,7 +210,6 @@ void handleConnection()
 		fatal("opening file", functionName, stdout);
 
 	// initialize local variables
-	const unsigned char connectionEstablishedResponse[CONNECTION_ESTABLISHED_MESSAGE_LENGTH + 1] = "HTTP/1.1 200 Connection Established\r\n\r\n\0";
 	pthread_mutex_t *mutexes = setupMutexes(MAX_CONNECTION_COUNT * 2);
 	struct connectionResources connections[MAX_CONNECTION_COUNT];
 
@@ -299,7 +297,6 @@ void handleConnection()
 			// get information about server
 			char destinationName[DESTINATION_NAME_LENGTH + 1];
 			int functionResult = getDestinationName(temp->dataFromClient, destinationName, outputFilePtr);
-			int nameOffset;
 
 			if(functionResult == -1)
 			{
@@ -310,8 +307,6 @@ void handleConnection()
 				close(temp->clientSocket);
 				continue;
 			}
-			else
-				nameOffset = functionResult;
 
 			char destinationPort[DESTINATION_PORT_LENGTH + 1] = LISTENING_PORT;
 
@@ -320,6 +315,7 @@ void handleConnection()
 			// not whitelisted
 			if(!isWhitelisted(whitelist, destinationName, destinationPort, destinationAddressInformation))
 			{
+				temp->serverSocket = 0;
 				threadFunction = &blacklistedThreadFunction;
 			}
 			// whitelisted
@@ -424,57 +420,33 @@ int returnListeningSocket()
 
 /*
  * create, connect, and return a socket to the client
- * returns -1 for timeout, -2 for error accepting, -3 for error finding client addres information
  */
 int returnSocketToClient(const int listeningSocket)
 {
-#define SERVER_TIMEOUT_VALUE 2
-	// set up timeout
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = SERVER_TIMEOUT_VALUE;
-	setsockopt(listeningSocket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
-	int timeoutCount = 0;
-
 	struct sockaddr clientAddress;
 	socklen_t sin_size = sizeof(struct sockaddr);
 	int socketToClient;
 
 	while(1)
 	{
-		if(timeoutCount >= TIMEOUT_COUNT)
-		{
-			return -1;
-		}
-
 		socketToClient = accept(listeningSocket, &clientAddress, &sin_size);
 
 		if(socketToClient == -1)
 		{
-			if(errno == EAGAIN || errno == EWOULDBLOCK)
-				timeoutCount++;
-
-			else
-			{
-				printf("errno %d: ", errno);
-				return -2;
-			}
+			printf("errno %d: ", errno);
+			return -2;
 		}
 
 		// got connection
 		else
-		{
 			break;
-		}
 	}
 
 	char clientAddressString[INET_ADDRSTRLEN];
 	struct sockaddr_in clientAddress_in = *((struct sockaddr_in *)&clientAddress);
 
-	if(inet_ntop(AF_INET, &clientAddress_in.sin_addr, clientAddressString, INET_ADDRSTRLEN) == NULL)
-		return -3;
-
-	printf("got connection from %s port %d\n", clientAddressString, clientAddress_in.sin_port);
+	if(inet_ntop(AF_INET, &clientAddress_in.sin_addr, clientAddressString, INET_ADDRSTRLEN) != NULL)
+		printf("got connection from %s port %d\n", clientAddressString, clientAddress_in.sin_port);
 
 	return socketToClient;
 }
@@ -606,15 +578,14 @@ void *whitelistedThreadFunction(void *args)
 	unsigned char *writeBuffer = parameters.writeBuffer;
 	const unsigned char *readBuffer = parameters.readBuffer;
 	// file pointers
-	FILE *localOutputFilePtr = parameters.localOutputFilePtr;
-	FILE *globalOutputFilePtr = parameters.globalOutputFilePtr;
+	FILE *outputFilePtr = parameters.outputFilePtr;
+	FILE *debugFilePtr = parameters.debugFilePtr;
 	// mutex locks
 	pthread_mutex_t *mutex_writeBuffer = parameters.mutex_writeBufferSize;
 	pthread_mutex_t *mutex_readBuffer = parameters.mutex_readBufferSize;
 
 	unsigned char tempReadBuffer[BUFFER_SIZE + 1];
 	ssize_t recvResult;
-	bool clientConnected = (connectedTo[0] == 'c') ? (true) : (false);
 
 	// set up timeout
 	struct timeval tv;
@@ -631,7 +602,7 @@ void *whitelistedThreadFunction(void *args)
 			*shutDown = true;
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Terminating: idle connection\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Terminating: idle connection\n", ID, connectedTo);
+			fprintf(debugFilePtr, "[%d - %s] Terminating: idle connection\n", ID, connectedTo);
 			pthread_mutex_unlock(&mutex_outputFile);
 			pthread_exit(NULL);
 		}
@@ -646,7 +617,7 @@ void *whitelistedThreadFunction(void *args)
 				*shutDown = true;
 				pthread_mutex_lock(&mutex_outputFile);
 				printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connectedTo, errno);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connectedTo, errno);
+				fprintf(debugFilePtr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connectedTo, errno);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
@@ -666,16 +637,16 @@ void *whitelistedThreadFunction(void *args)
 				*shutDown = true;
 				pthread_mutex_lock(&mutex_outputFile);
 				printf("[%d - %s] Terminating: 0 bytes received\n", ID, connectedTo);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: 0 bytes received\n", ID, connectedTo);
+				fprintf(debugFilePtr, "[%d - %s] Terminating: 0 bytes received\n", ID, connectedTo);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
 
 			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(globalOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(localOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			dump(tempReadBuffer, recvResult, localOutputFilePtr);
+			printf("[%d - %s] Read %zd bytes\n", ID, connectedTo, recvResult);
+			fprintf(debugFilePtr, "[%d - %s] Read %zd bytes\n", ID, connectedTo, recvResult);
+			fprintf(outputFilePtr, "[%d - %s] Read %zd bytes\n", ID, connectedTo, recvResult);
+			dump(tempReadBuffer, recvResult, outputFilePtr);
 			pthread_mutex_unlock(&mutex_outputFile);
 
 			// wait until buffer is empty before writing to it
@@ -688,8 +659,8 @@ void *whitelistedThreadFunction(void *args)
 			pthread_mutex_unlock(mutex_writeBuffer);
 
 			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Wrote %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(globalOutputFilePtr, "[%d - %s] Wrote %ld bytes\n", ID, connectedTo, recvResult);
+			printf("[%d - %s] Wrote %zd bytes\n", ID, connectedTo, recvResult);
+			fprintf(debugFilePtr, "[%d - %s] Wrote %zd bytes\n", ID, connectedTo, recvResult);
 			pthread_mutex_unlock(&mutex_outputFile);
 		}
 
@@ -701,14 +672,14 @@ void *whitelistedThreadFunction(void *args)
 				pthread_mutex_lock(&mutex_outputFile);
 				*shutDown = true;
 				printf("[%d - %s] Terminating: error sending data\n", ID, connectedTo);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: error sending data\n", ID, connectedTo);
+				fprintf(debugFilePtr, "[%d - %s] Terminating: error sending data\n", ID, connectedTo);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
 
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Sent data\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Sent data\n", ID, connectedTo);
+			fprintf(debugFilePtr, "[%d - %s] Sent data\n", ID, connectedTo);
 			pthread_mutex_unlock(&mutex_outputFile);
 
 			pthread_mutex_lock(mutex_readBuffer);
@@ -717,7 +688,7 @@ void *whitelistedThreadFunction(void *args)
 
 			pthread_mutex_lock(&mutex_outputFile);
 			printf("[%d - %s] Set buffer to empty\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Set buffer to empty\n", ID, connectedTo);
+			fprintf(debugFilePtr, "[%d - %s] Set buffer to empty\n", ID, connectedTo);
 			pthread_mutex_unlock(&mutex_outputFile);
 		}
 	}
@@ -726,7 +697,7 @@ void *whitelistedThreadFunction(void *args)
 	close(socket);
 	pthread_mutex_lock(&mutex_outputFile);
 	printf("[%d - %s] Terminating: shutdown variable set\n", ID, connectedTo);
-	fprintf(globalOutputFilePtr, "[%d - %s] Terminating: shutdown variable set\n", ID, connectedTo);
+	fprintf(debugFilePtr, "[%d - %s] Terminating: shutdown variable set\n", ID, connectedTo);
 	pthread_mutex_unlock(&mutex_outputFile);
 	pthread_exit(NULL);
 }
@@ -749,23 +720,9 @@ void *listeningThreadFunction(void *args)
 		if(tempAcceptedSocket == 0)
 			tempAcceptedSocket = returnSocketToClient(listeningSocket);
 
-		if(tempAcceptedSocket == -1)
-		{
-			printf("[ listener ] accepting connection timed out\n");
-			*shutDown = true;
-			continue;
-		}
-
-		else if(tempAcceptedSocket == -2)
+		if(tempAcceptedSocket == -2)
 		{
 			printf("[ listener ] error while accepting connection\n");
-			*shutDown = true;
-			continue;
-		}
-
-		else if(tempAcceptedSocket == -3)
-		{
-			printf("[ listener ] error finding client address information\n");
 			*shutDown = true;
 			continue;
 		}
@@ -819,12 +776,6 @@ void cleanupConnections(struct connectionResources *conRes, int connectionCount)
 
 void getRequestedObject(const unsigned char *requestMessage, char *requestedObject)
 {
-	if(strstr((char *)requestMessage, "GET ") == NULL)
-	{
-		requestedObject[0] = '\0';
-		return;
-	}
-
 	char *requestedObjectEnd = strstr((char *)requestMessage, " HTTP/");
 
 	if(requestedObjectEnd == NULL)
@@ -835,162 +786,263 @@ void getRequestedObject(const unsigned char *requestMessage, char *requestedObje
 
 	else
 	{
-		int nameLength = requestedObjectEnd - (char *)requestMessage;
-		strncpy(requestedObject, (char *)requestMessage, nameLength);
-		requestedObject[nameLength] = '\0';
+		int nameLength = requestedObjectEnd - (char *)(requestMessage + 4);
+		if((nameLength == 1) && (*(requestMessage + 4) == '/'))
+			strcpy(requestedObject, "index.html\0");
+		else
+		{
+			strncpy(requestedObject, (char *)(requestMessage + 4), nameLength);
+			requestedObject[nameLength] = '\0';
+		}
 		return;
 	}
 }
 
-void loadDefaultHTML(unsigned char* buffer)
+int sendResponse(int socket, const int options, const char* fileType, char* writeBuffer, const struct HTTPResponse* response, FILE* outputFilePtr)
 {
-	FILE* defaultHTMLFile = fopen("files/default.html", "r");
-	if(defaultHTMLFile == NULL)
-		fatal("opening default html file", "loadDefaultHTML", stdout);
-	
-	
+#define FILE_READ_BUFFER_SIZE 100
+	memset(writeBuffer, 0, 	BUFFER_SIZE);
+	strcat(writeBuffer, response->responseVersion);
+	strcat(writeBuffer, " ");
+	strcat(writeBuffer, response->statusCode);
+	strcat(writeBuffer, "\r\n");
+	for(int i = 0;i<RESPONSE_HEADER_COUNT;i++)
+	{
+		if(response->headers[i].headerName == NULL)
+			break;
+		else
+		{
+			strcat(writeBuffer, response->headers[i].headerName);
+			strcat(writeBuffer, ": ");
+			strcat(writeBuffer, response->headers[i].headerData);
+			strcat(writeBuffer, "\r\n");
+		}
+	}
+	strcat(writeBuffer, "\r\n");
+	int writeBufferSize = strlen(writeBuffer);
+	FILE* inputFile;
+	if((options & RESPONSE_NO_PAYLOAD) == 0)
+	{
+		if(strcmp(fileType, "html") == 0)
+		{
+			gzipCompress("files/default.html");
+			inputFile = fopen("files/default.html.gz", "rb");
+			if(inputFile == NULL)
+				return -2;
+		}
+		else
+			return -1;
 
-	fclose(defaultHTMLFile);
+		char fileReadBuffer[FILE_READ_BUFFER_SIZE];
+		size_t bytesRead;
+		while((bytesRead = fread(fileReadBuffer, 1, FILE_READ_BUFFER_SIZE, inputFile)) > 0)
+		{
+			memcpy(writeBuffer + writeBufferSize, fileReadBuffer, bytesRead);
+			writeBufferSize += bytesRead;
+		}
+	}
+
+	fprintf(outputFilePtr, "Send response with size %d:\n", writeBufferSize);
+	dump((unsigned char*)writeBuffer, writeBufferSize, outputFilePtr);
+	write(socket, writeBuffer, writeBufferSize);
+	fclose(inputFile);
+	return 0;
 }
 
 void* blacklistedThreadFunction(void* args)
 {
-#define CONNECTION_TIMEOUT_VALUE 2
+#define REQUESTED_OBJECT_NAME_LENGTH 30
+#define REQUESTED_OBJECT_TYPE_LENGTH 7
 	// set up local variables with argument
 	struct threadParameters parameters = *(struct threadParameters *)args;
-	// connection info
 	const int socket = *parameters.socket;
+	// terminate if server thread
+	if(socket == 0)
+		pthread_exit(NULL);
 	const int ID = parameters.connectionID;
-	char connectedTo[NAME_LENGTH];
-	memcpy(connectedTo, parameters.connectedTo, NAME_LENGTH);
 	bool *shutDown = parameters.shutDown;
 	// read/write buffer info
-	int *readBufferSize = parameters.readBufferSize;
-	int *writeBufferSize = parameters.writeBufferSize;
-	unsigned char *writeBuffer = parameters.writeBuffer;
-	const unsigned char *readBuffer = parameters.readBuffer;
+	unsigned char *dataFromClient = parameters.writeBuffer;
+	unsigned char *dataToClient = parameters.readBuffer;
 	// file pointers
-	FILE *localOutputFilePtr = parameters.localOutputFilePtr;
-	FILE *globalOutputFilePtr = parameters.globalOutputFilePtr;
-	// mutex locks
-	pthread_mutex_t *mutex_writeBuffer = parameters.mutex_writeBufferSize;
-	pthread_mutex_t *mutex_readBuffer = parameters.mutex_readBufferSize;
+	FILE *outputFilePtr = parameters.outputFilePtr;
+	FILE *debugFilePtr = parameters.debugFilePtr;
 
-	unsigned char tempReadBuffer[BUFFER_SIZE + 1];
+	// local variables
 	ssize_t recvResult;
-	bool clientConnected = (connectedTo[0] == 'c') ? (true) : (false);
-
-	// set up timeout
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = CONNECTION_TIMEOUT_VALUE;
-	setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
-	int timeoutCount = 0;
+	int requestType = 0;
+	char requestedObject[REQUESTED_OBJECT_NAME_LENGTH];
+	char requestedObjectType[REQUESTED_OBJECT_TYPE_LENGTH];
+	static struct HTTPResponse* defaultResponse = NULL;
+	if(defaultResponse == NULL)
+		setupResponse(&defaultResponse, 0);
+	int packetCount = 0;
 
 	while(!(*shutDown))
 	{
-		// CONNECTION_TIMEOUT_VALUE seconds have passed idle
-		if(timeoutCount >= TIMEOUT_COUNT)
+		requestType = getHTTPRequestType((char*)dataFromClient);
+		if(requestType == 0)
 		{
+			fprintf(stdout, "[%d #%d] Packet not HTTP\n", ID, packetCount);
+			fprintf(debugFilePtr, "[%d #%d] Packet not HTTP\n", ID, packetCount);
 			*shutDown = true;
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Terminating: idle connection\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Terminating: idle connection\n", ID, connectedTo);
-			pthread_mutex_unlock(&mutex_outputFile);
-			pthread_exit(NULL);
+			break;
 		}
 
-		recvResult = recv(socket, tempReadBuffer, BUFFER_SIZE, 0);
+		getRequestedObject(dataFromClient, requestedObject);
+		strcpy(requestedObjectType, strstr(requestedObject, ".") + 1);
 
-		// error reading data
+		switch(requestType)
+		{
+		case 1:
+			int result;
+			result = sendResponse(socket, 0, requestedObjectType, (char*)dataToClient, defaultResponse, outputFilePtr);
+			if(result == -1)
+			{
+				fprintf(stdout, "[%d #%d] Unknown file type\n", ID, packetCount);
+				fprintf(debugFilePtr, "[%d #%d] Unknown file type\n", ID, packetCount);
+				*shutDown = true;
+				break;
+			}
+			else if(result == -2)
+			{
+				fprintf(stdout, "[%d #%d] Error opening file\n", ID, packetCount);
+				fprintf(debugFilePtr, "[%d #%d] Error opening file\n", ID, packetCount);
+				*shutDown = true;
+				break;
+			}
+			else
+			{
+				fprintf(stdout, "[%d #%d] Successfully sent response\n", ID, packetCount);
+				fprintf(debugFilePtr, "[%d #%d] Successfully sent response\n", ID, packetCount);
+			}
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		case 6:
+			break;
+		case 7:
+			break;
+		default:
+			break;
+		}
+
+		recvResult = recv(socket, dataFromClient, BUFFER_SIZE, 0);
 		if(recvResult == -1)
 		{
-			if(errno != EAGAIN && errno != EWOULDBLOCK)
-			{
-				*shutDown = true;
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connectedTo, errno);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connectedTo, errno);
-				pthread_mutex_unlock(&mutex_outputFile);
-				pthread_exit(NULL);
-			}
-
-			// no data to read
-			else
-				timeoutCount++;
+			fprintf(stdout, "[%d #%d] Error reading from socket\n", ID, packetCount);
+			fprintf(debugFilePtr, "[%d #%d] Error reading from socket\n", ID, packetCount);
+			*shutDown = true;
+			break;
 		}
-
-		// data read
-		else
-		{
-			timeoutCount = 0;
-
-			if(recvResult == 0)
-			{
-				*shutDown = true;
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] Terminating: 0 bytes received\n", ID, connectedTo);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: 0 bytes received\n", ID, connectedTo);
-				pthread_mutex_unlock(&mutex_outputFile);
-				pthread_exit(NULL);
-			}
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(globalOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(localOutputFilePtr, "[%d - %s] Read %ld bytes\n", ID, connectedTo, recvResult);
-			dump(tempReadBuffer, recvResult, localOutputFilePtr);
-			pthread_mutex_unlock(&mutex_outputFile);
-
-			// wait until buffer is empty before writing to it
-			while(*writeBufferSize != 0) {};
-
-			// write to buffer and change buffer size
-			pthread_mutex_lock(mutex_writeBuffer);
-			memcpy(writeBuffer, tempReadBuffer, recvResult);
-			*writeBufferSize = recvResult;
-			pthread_mutex_unlock(mutex_writeBuffer);
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Wrote %ld bytes\n", ID, connectedTo, recvResult);
-			fprintf(globalOutputFilePtr, "[%d - %s] Wrote %ld bytes\n", ID, connectedTo, recvResult);
-			pthread_mutex_unlock(&mutex_outputFile);
-		}
-
-		// if there is data in the read buffer, send it
-		if(*readBufferSize != 0)
-		{
-			if(sendString(socket, readBuffer, *readBufferSize) == 0)
-			{
-				pthread_mutex_lock(&mutex_outputFile);
-				*shutDown = true;
-				printf("[%d - %s] Terminating: error sending data\n", ID, connectedTo);
-				fprintf(globalOutputFilePtr, "[%d - %s] Terminating: error sending data\n", ID, connectedTo);
-				pthread_mutex_unlock(&mutex_outputFile);
-				pthread_exit(NULL);
-			}
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Sent data\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Sent data\n", ID, connectedTo);
-			pthread_mutex_unlock(&mutex_outputFile);
-
-			pthread_mutex_lock(mutex_readBuffer);
-			*readBufferSize = 0;
-			pthread_mutex_unlock(mutex_readBuffer);
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Set buffer to empty\n", ID, connectedTo);
-			fprintf(globalOutputFilePtr, "[%d - %s] Set buffer to empty\n", ID, connectedTo);
-			pthread_mutex_unlock(&mutex_outputFile);
-		}
+		fprintf(stdout, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
+		fprintf(debugFilePtr, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
+		fprintf(outputFilePtr, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
+		packetCount++;
+		dump(dataFromClient, recvResult, outputFilePtr);
 	}
 
 	// clean up code
 	close(socket);
 	pthread_mutex_lock(&mutex_outputFile);
-	printf("[%d - %s] Terminating: shutdown variable set\n", ID, connectedTo);
-	fprintf(globalOutputFilePtr, "[%d - %s] Terminating: shutdown variable set\n", ID, connectedTo);
+	printf("[%d] Terminating: shutdown variable set\n", ID);
+	fprintf(debugFilePtr, "[%d] Terminating: shutdown variable set\n", ID);
 	pthread_mutex_unlock(&mutex_outputFile);
+	free(defaultResponse);
 	pthread_exit(NULL);
+}
+
+int getHTTPRequestType(const char* receivedData)
+{
+	if(receivedData[0] == 'G')
+		return (strncmp(receivedData, "GET", 3)==0)?1:0;
+	else if(receivedData[0] == 'P')
+	{
+		if(receivedData[1] == 'O')
+			return (strncmp(receivedData, "POST", 4)==0)?2:0;
+		else
+			return (strncmp(receivedData, "PATCH", 5)==0)?5:0;
+	}
+	else if(receivedData[0] == 'H')
+		return (strncmp(receivedData, "HEAD", 4)==0)?3:0;
+	else if(receivedData[0] == 'D')
+		return (strncmp(receivedData, "DELETE", 6)==0)?4:0;
+	else if(receivedData[0] == 'T')
+		return (strncmp(receivedData, "TRACE", 5)==0)?6:0;
+	else if(receivedData[0] == 'C')
+		return (strncmp(receivedData, "CONNECT", 7)==0)?7:0;
+	else
+		return 0;
+}
+
+void setupResponse(struct HTTPResponse** destination, int options)
+{
+#define SERVER_HEADER_DEFAULT "nginx/1.18.0 (Ubuntu)\0"
+#define DATE_HEADER_DEFAULT "Wed, 29 Jan 2025 23:45:35 GMT\0"
+#define CONTENTTYPE_HEADER_DEFAULT "text/html\0"
+#define LASTMODIFIED_HEADER_DEFAULT "Wed, 29 Jan 2025 23:45:35 GMT\0"
+#define CONNECTION_HEADER_DEFAULT "keep-alive\0"
+#define ETAG_HEADER_DEFAULT "W/\"641b16b8-1404\"\0"
+#define REFERRERPOLICY_HEADER_DEFAULT "strict-origin-when-cross-origin\0"
+#define XCONTENTTYPEOPTIONS_HEADER_DEFAULT "nosniff\0"
+#define CONTENTENCODING_HEADER_DEFAULT "gzip\0"
+
+	struct HTTPResponse* response  = (struct HTTPResponse*)malloc(sizeof(struct HTTPResponse) + (RESPONSE_HEADER_COUNT*sizeof(struct header)));
+	*destination = response;
+	strcpy(response->responseVersion, "HTTP/1.1\0");
+	strcpy(response->statusCode, "200 OK\0");
+
+	response->headers[0].headerName = (char*)malloc(sizeof("Server\0"));
+	strcpy(response->headers[0].headerName, "Server\0");
+	response->headers[0].headerData = (char*)malloc(sizeof(SERVER_HEADER_DEFAULT));
+	strcpy(response->headers[0].headerData, SERVER_HEADER_DEFAULT);
+
+	response->headers[1].headerName = (char*)malloc(sizeof("Date\0"));
+	strcpy(response->headers[1].headerName, "Date\0");
+	response->headers[1].headerData = (char*)malloc(sizeof(DATE_HEADER_DEFAULT));
+	strcpy(response->headers[1].headerData, DATE_HEADER_DEFAULT);
+
+	response->headers[2].headerName = (char*)malloc(sizeof("Content-Type\0"));
+	strcpy(response->headers[2].headerName, "Content-Type\0");
+	response->headers[2].headerData = (char*)malloc(sizeof(CONTENTTYPE_HEADER_DEFAULT));
+	strcpy(response->headers[2].headerData, CONTENTTYPE_HEADER_DEFAULT);
+
+	response->headers[3].headerName = (char*)malloc(sizeof("Last-Modified\0"));
+	strcpy(response->headers[3].headerName, "Last-Modified\0");
+	response->headers[3].headerData = (char*)malloc(sizeof(LASTMODIFIED_HEADER_DEFAULT));
+	strcpy(response->headers[3].headerData, LASTMODIFIED_HEADER_DEFAULT);
+
+	response->headers[4].headerName = (char*)malloc(sizeof("Connection\0"));
+	strcpy(response->headers[4].headerName, "Connection\0");
+	response->headers[4].headerData = (char*)malloc(sizeof(CONNECTION_HEADER_DEFAULT));
+	strcpy(response->headers[4].headerData, CONNECTION_HEADER_DEFAULT);
+
+	response->headers[5].headerName = (char*)malloc(sizeof("ETag\0"));
+	strcpy(response->headers[5].headerName, "ETag\0");
+	response->headers[5].headerData = (char*)malloc(sizeof(ETAG_HEADER_DEFAULT));
+	strcpy(response->headers[5].headerData, ETAG_HEADER_DEFAULT);
+
+	response->headers[6].headerName = (char*)malloc(sizeof("Referrer-Policy\0"));
+	strcpy(response->headers[6].headerName, "Referrer-Policy\0");
+	response->headers[6].headerData = (char*)malloc(sizeof(REFERRERPOLICY_HEADER_DEFAULT));
+	strcpy(response->headers[6].headerData, REFERRERPOLICY_HEADER_DEFAULT);
+
+	response->headers[7].headerName = (char*)malloc(sizeof("X-Content-Type-Options\0"));
+	strcpy(response->headers[7].headerName, "X-Content-Type-Options\0");
+	response->headers[7].headerData = (char*)malloc(sizeof(XCONTENTTYPEOPTIONS_HEADER_DEFAULT));
+	strcpy(response->headers[7].headerData, XCONTENTTYPEOPTIONS_HEADER_DEFAULT);
+
+	response->headers[8].headerName = (char*)malloc(sizeof("Content-Encoding\0"));
+	strcpy(response->headers[8].headerName, "Content-Encoding\0");
+	response->headers[8].headerData = (char*)malloc(sizeof(CONTENTENCODING_HEADER_DEFAULT));
+	strcpy(response->headers[8].headerData, CONTENTENCODING_HEADER_DEFAULT);
+
+	response->headers[9].headerName = NULL;
+	response->headers[9].headerData = NULL;
 }

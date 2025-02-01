@@ -401,3 +401,29 @@ void cleanMutexes(pthread_mutex_t *mutexes, int mutexCount)
 
 	free(mutexes);
 }
+
+void gzipCompress(const char *inputFileName)
+{
+#define CHUNK 16384
+	FILE* source = fopen(inputFileName, "rb");
+	if(source == NULL)
+		fatal("opening source file", "gzipCompress", stdout);
+	
+	char outputFileName[100];
+	strcpy(outputFileName, inputFileName);
+	strcat(outputFileName, ".gz");
+	gzFile destination = gzopen(outputFileName, "wb");
+	if(destination == NULL)
+		fatal("opening destination file", "gzipCompress", stdout);
+	
+	unsigned char buffer[CHUNK];
+	int bytes_read = 0;
+	while((bytes_read = fread(buffer, 1, CHUNK, source))>0)
+	{
+		if(gzwrite(destination, buffer, bytes_read) != bytes_read)
+			fatal("writing data", "gzipCompress", stdout);
+	}
+
+	fclose(source);
+	gzclose(destination);
+}

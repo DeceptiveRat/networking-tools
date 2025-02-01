@@ -15,5 +15,5 @@ find . -name "*.h" | while read -r header_file; do
 done
 cd "$startDirectory"
 gcc -I../include -c http_proxy.c -o http_proxy.o -Wall -g
-gcc ../include/*.o http_proxy.o -o iSim -lm
+gcc ../include/*.o http_proxy.o -o iSim -lm -lz
 exit

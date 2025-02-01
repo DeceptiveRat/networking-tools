@@ -1,4 +1,4 @@
-Version 1.0
+## Version 1.0
 1. separated each layer function into separate header and c files.
 	1.1 new files: ethernet.c, ethernet.h, ip.c, ip.h, tcp.c, tcp.h, udp.c, udp.h, dns.c, dns.h
 2. added functions to print each layer.
@@ -10,7 +10,7 @@ Version 1.0
 7. all layer headers are now stored in host order, not just DNS
 	7.1 ip source and destination address is stored in network byte order so "inet_ntop" can be used
 
-Version 1.1
+## Version 1.1
 1. removed "pcap_fatal" function, file: packetSniffer.c.
 2. added more elements to "pcap_handler_arguments", file: packetFunctions.h.
 	2.1 rawOutputFilePtr: to print raw bytes of the function
@@ -21,13 +21,13 @@ Version 1.1
 6. removed all other structure for packets except "ethernet_packet" and renamed it to "packet_structure", file: packetFunctions.h.
 7. the raw bytes of a packet is dumped to a different file now.
 
-Version 2.0
+## Version 2.0
 1. added a C proxy server
 	1.1 changed some things to make it compatible with code from the packet sniffer
 2. created separate directories for each tool
 	2.1 the include directory contains common code files
 
-Version 2.1
+## Version 2.1
 1. removed caching feature from
 	1.1 file: /include/socketFunctions.c
 	1.2 file: /include/socketFunctions.h
@@ -39,29 +39,59 @@ Version 2.1
 7. added "itoa" function, file:/include/otherFunctions.h
 8. added "compile.sh", path: /Internet Simulator/ path: /Packet Sniffer/, for easy compiling
 
-Version 2.1.1
+## Version 2.1.1
 1. corrected README.md
 2. removed binary iSim
 
-Version 2.2
-1. moved functions "setupMutexes" "cleanMutexes" to /include/otherFunctions.h
-2. moved some macros to the start of the functions that use them
-3. added whitelist implementation
-	3.1 new: "setupWhitelist"
-	3.2 new: "whitelistStructure"
-	3.3 rename: "threadFunction" => "whitelistedThreadFunction"
-	3.4 created generic "threadFunction" that can contain both thread functions
-4. remove "DOMAIN_NAME_FILE_NAME"
-5. removed redundant mutex cleanup code in "handleConnection"
-6. when sending an HTTPS connection request to the server fails, instead of the program terminating, that one connection is terminated
-7. specific connection files now only contain exchange logs, and no debugging details such as connection established messages
-	7.1 one exception is the "read %ld bytes" string
-8. the "all exchanges.log" file now contains no packet dumps and only contains debugging information for each connection. It will also be renamed "connections.dbg"
-9. removed HTTPS related code since there won't be any CONNECT requests
-10. removed "getDestinationPort" since the listening port will be the destination port
-11. rename PORT => LISTENING_PORT
-12. etc code cleanups
-	12.1 removed redundant parentheses when creating threads in "handleConnection"
-13. added blacklist handling functions
-	13.1 new: "loadDefaultHTML"
-	13.2 new: "blacklistedThreadFunction"
+## Version 3.1
+### summary:
+- different behaviors for black/whitelisted hosts
+- specific connection files now only contain exchange logs
+- connections.dbg(previous: all exchanges.log) contains only debugging information for connections
+- no more HTTPS handling
+- iSim responds to HTTP html requests by compressing the *default.html* file to *default.html.gz* and sending it
+- *change_log.txt* is now *change_log.md*. It has different formatting as well
+
+### cleanups:
+- m: moved some macro definitions to start of functions that use them
+- f: handleConnection
+	- removed redundant parentheses
+- f: setupMutexes
+	- /include/socketFunctions.h => /include/otherFunctions.h
+- f: cleanMutexes
+	- /include/socketFunctions.h => /include/otherFunctions.h
+
+### new:
+#### /include/socketFunctions.h
+- f: setupWhitelist
+- s: whitelistStructure
+- f: sendResponse
+- f: blacklistedThreadFunction
+- f: getHTTPRequestType
+- f: getRequestedObject
+- f: setupResponse
+- s: header
+- s: HTTPResponse
+
+#### /include/otherFunctions.h
+- f: gzipCompress
+
+### rename:
+#### /include/socketFunctions.h
+- f: threadFunction => whitelistedThreadFunction
+- m: PORT => LISTENING_PORT
+- s_v: threadParameters.globalOutputFilePtr => debugFilePtr
+- s_v: threadParameters.localOutputFilePtr => outputFilePtr
+- fl: all exchanges.log => connections.dbg
+
+#### /
+- fl: change_log.txt => change_log.md
+
+### remove:
+#### /include/socketFunctions.h
+- m: DOMAIN_NAME_FILE_NAME
+- ft: timeout for listening socket
+- ft: HTTPS related code
+- f: getDestinationPort
+
+### change:

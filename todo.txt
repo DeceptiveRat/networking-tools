@@ -28,14 +28,20 @@
 	- option to log responses from servers
 	- option to not let reponse through
 - create standard response 
-	- one each for html, html + js, etc?
+	- option to use certain HTTP status code
+	- option to return custom file
+- parse other requests, not just GET
 - improve the bulk_print function
-- evaluate the need for isHTTPS variable in thread parameter
-- if the program isn't connected to the internet, there will be an error trying to find the domain name
+- handle other protocols, not just HTTP
 - the name client should be changed
 - create cleanup header that contains all cleanup functions
 - use cleanupConnections function
 - print whitelist, add to whitelist while running program
+- setupResponse function should have options to change default responses in at least the following headers:
+	- Content-Encoding
+- sendResponse function currently defaults to compressing file before sending
+- change naming style to a consistent one, all CamelCase or _
 
 - Change README.md to reflect new changes
 - Change the license header in each file
+- create a manual for each function
