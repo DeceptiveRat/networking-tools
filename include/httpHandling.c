@@ -28,7 +28,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "socketFunctions.h"
+#include "httpHandling.h"
 #include "otherFunctions.h"
 
 pthread_mutex_t mutex_outputFile = PTHREAD_MUTEX_INITIALIZER;
@@ -188,12 +188,11 @@ void setupWhitelist(struct whitelistStructure *whitelist)
 	fclose(whitelistFile);
 }
 
-void handleConnection()
+void handleHTTPConnection()
 {
 #define DESTINATION_NAME_LENGTH 100
 #define DESTINATION_PORT_LENGTH 5
-#define CONNECTION_ESTABLISHED_MESSAGE_LENGTH 39
-	char functionName[] = "handleConnection";
+	char functionName[] = "handleHTTPConnection";
 	setDomainNames();
 	struct whitelistStructure whitelist;
 	setupWhitelist(&whitelist);
@@ -543,22 +542,6 @@ bool isConnectMethod(const unsigned char *receivedData)
 
 	else
 		return true;
-}
-
-bool isNumber(const char *stringToCheck)
-{
-	int stringLength = strlen(stringToCheck);
-
-	for(int i = 0; i < stringLength; i++)
-	{
-		if(stringToCheck[i] >= 48 && stringToCheck[i] <= 57)
-			continue;
-
-		else
-			return false;
-	}
-
-	return true;
 }
 
 void *whitelistedThreadFunction(void *args)

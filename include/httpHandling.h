@@ -124,7 +124,7 @@ void setupWhitelist(struct whitelistStructure* whitelist);
 void setupResponse(struct HTTPResponse** destination, int options);
 
 // action function
-void handleConnection();
+void handleHTTPConnection();
 int sendResponse(int socket, const int options, const char* fileType, char* writeBuffer, const struct HTTPResponse* response, FILE* outputFilePtr);
 
 // return sockets
@@ -140,7 +140,6 @@ int getHTTPRequestType(const char* receivedData);
 void getRequestedObject(const unsigned char *requestMessage, char *requestedObject);
 
 // verifying functions
-bool isNumber(const char* stringToCheck);
 bool isWhitelisted(const struct whitelistStructure whitelist, const char* destinationName, const char* destinationPort, const struct addrinfo addressInfo);
 
 // thread functions

@@ -427,3 +427,19 @@ void gzipCompress(const char *inputFileName)
 	fclose(source);
 	gzclose(destination);
 }
+
+bool isNumber(const char *stringToCheck)
+{
+	int stringLength = strlen(stringToCheck);
+
+	for(int i = 0; i < stringLength; i++)
+	{
+		if(stringToCheck[i] >= 48 && stringToCheck[i] <= 57)
+			continue;
+
+		else
+			return false;
+	}
+
+	return true;
+}

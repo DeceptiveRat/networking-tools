@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <math.h>
 #include <zlib.h>
+#include <stdbool.h>
 
 #define ERROR_MESSAGE_SIZE 200
 #define HEX_STREAM_LENGTH 500
@@ -61,6 +62,7 @@ void fatal(const char *message, const char *location, FILE *outputFilePtr);
 void bulk_print(const struct FILE_POINTERS files, int argCount, ...);
 void itoa(const int number, char* destination);
 void gzipCompress(const char *inputFileName);
+bool isNumber(const char* stringToCheck);
 
 // debugging functions
 int hex_stream_to_bytes(char *fileName, unsigned char **packet);
