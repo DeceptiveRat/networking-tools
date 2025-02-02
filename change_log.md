@@ -79,19 +79,49 @@
 ### rename:
 #### /include/socketFunctions.h
 - f: threadFunction => whitelistedThreadFunction
-- m: PORT => LISTENING_PORT
-- s_v: threadParameters.globalOutputFilePtr => debugFilePtr
-- s_v: threadParameters.localOutputFilePtr => outputFilePtr
+- m: PORT => LISTENING\_PORT
+- s\_v: threadParameters.globalOutputFilePtr => debugFilePtr
+- s\_v: threadParameters.localOutputFilePtr => outputFilePtr
 - fl: all exchanges.log => connections.dbg
 
 #### /
-- fl: change_log.txt => change_log.md
+- fl: change\_log.txt => change\_log.md
 
 ### remove:
 #### /include/socketFunctions.h
-- m: DOMAIN_NAME_FILE_NAME
+- m: DOMAIN\_NAME\_FILE\_NAME
 - ft: timeout for listening socket
 - ft: HTTPS related code
 - f: getDestinationPort
+
+### change:
+
+## Version 3.2
+### summary:
+- 
+
+### cleanups:
+- f: isNumber
+	- /include/socketFunctions.h => /include/otherFunctions.h
+
+### new:
+#### /Internet Simulator
+- fl: dnsProxy.c
+
+#### /include
+- fl: dnsHandling.h
+- fl: dnsHandling.c
+- fl: dnsHandling.md
+
+### rename:
+- /include/socketFunctions.h => /include/httpHandling.h
+- /include/socketFunctions.c => /include/httpHandling.c
+
+#### /include/httpHandling.h
+- f: handleConnection => handleHTTPConnection
+
+### remove:
+#### /include/httpHandling.h
+- m: CONNECTION\_ESTABLISHED\_MESSAGE\_LENGTH
 
 ### change:

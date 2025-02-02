@@ -22,6 +22,7 @@
 ## clean up code:
 - change multiple fprintf and printfs to one function 
 - move functions to different files
+- breakdown longer functions into smaller ones, about 50 lines
 
 ## add new feature:
 - need to be able to let some packets through
@@ -41,6 +42,7 @@
 	- Content-Encoding
 - sendResponse function currently defaults to compressing file before sending
 - change naming style to a consistent one, all CamelCase or _
+- add support for DNS over TCP
 
 - Change README.md to reflect new changes
 - Change the license header in each file

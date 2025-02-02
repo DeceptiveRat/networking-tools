@@ -15,12 +15,9 @@
  * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "httpHandling.h"
 #include "otherFunctions.h"
 
-int main(void)
+int main(int argc, char* argv[])
 {
-	handleHTTPConnection();
-
     return 0;
 }
