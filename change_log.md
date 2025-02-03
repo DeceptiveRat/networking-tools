@@ -98,6 +98,8 @@
 
 ## Version 4.1
 ### summary:
+- *dnsProxy* added
+	- currently captures all dns requests and prints them. Does not respond to them yet
 - in *dnsHandling.h/dnsHandling.c*, instead of *fatal()* being used, functions now return -1 when an error occurs and saves the error message to *error_message*
 - */Internet Simulator/compile.sh* modified to compile *dnsProxy.c* to *dnsProxy* and *httpProxy.c* to *httpProxy*
 
