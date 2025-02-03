@@ -22,7 +22,7 @@
 
 	Both sockets are:
 	(1) set to non-block
-	(2) bound to localhost
+	(2) bound to localhost on port DNS_LISTENING_PORT
 
 ### Return Value
 	-1 on error, 0 on success.

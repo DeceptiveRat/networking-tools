@@ -114,6 +114,7 @@ bool get_dns_response(const unsigned char *udp_payload_start, struct dns_respons
  */
 char* get_domain_name(const unsigned char* query_start_pointer, int *query_offset);
 void print_dns_query(struct dns_query* dns_query_packet, FILE* outputFilePtr);
+int freeDnsQuery(struct dns_query* dns_query_packet);
 
 // debugging functions
 void debug_dns_packet(unsigned char *user_args, const unsigned char *packet, const int packet_length);

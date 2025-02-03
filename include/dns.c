@@ -15,27 +15,27 @@
  * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
 #include <pcap.h>
+#include <string.h>
 
-#include "otherFunctions.h"
+#include "dns.h"
 #include "ethernet.h"
 #include "ip.h"
+#include "otherFunctions.h"
 #include "tcp.h"
 #include "udp.h"
-#include "dns.h"
 
-bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_query_pointer)
+bool get_dns_query(const unsigned char *header_start, struct dns_query **dns_query_pointer)
 {
-	struct allocated_pointers* head = NULL;
-	head = (struct allocated_pointers*)malloc(sizeof(struct allocated_pointers));
+	struct allocated_pointers *head = NULL;
+	head = (struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
 
 	if(head == NULL)
 		fatal("allocating memory for clean up head", "get_dns_query", NULL);
 
 	head->next_pointer = NULL;
 
-	*dns_query_pointer = (struct dns_query*)malloc(sizeof(struct dns_query));
+	*dns_query_pointer = (struct dns_query *)malloc(sizeof(struct dns_query));
 
 	if(dns_query_pointer == NULL)
 		return false;
@@ -49,7 +49,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 	// add header
 	struct dns_hdr query_header;
 
-	query_header = *(struct dns_hdr*)header_start;
+	query_header = *(struct dns_hdr *)header_start;
 
 	// convert network byte order to host byte order
 	query_header.dns_id = ntohs(query_header.dns_id);
@@ -73,15 +73,15 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 
 	(*dns_query_pointer)->dns_header = query_header;
 
-	const unsigned char* query_start = header_start + DNS_HDR_LEN;
+	const unsigned char *query_start = header_start + DNS_HDR_LEN;
 	unsigned char byte;
 	unsigned short word;
 	int query_offset = 0;
 	int query_count = query_header.dns_question_count;
 
 	// initialize query variables
-	struct dns_query_section* queries = NULL;
-	queries = (struct dns_query_section*)malloc(sizeof(struct dns_query_section) * query_count);
+	struct dns_query_section *queries = NULL;
+	queries = (struct dns_query_section *)malloc(sizeof(struct dns_query_section) * query_count);
 
 	if(queries == NULL)
 		fatal("allocating memory for dns queries", "get_dns_query", NULL);
@@ -90,7 +90,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 		add_new_pointer(head, NULL, queries);
 
 	char **domain_names = NULL;
-	domain_names = (char**)malloc(sizeof(char*)*query_count);
+	domain_names = (char **)malloc(sizeof(char *) * query_count);
 
 	if(domain_names == NULL)
 		fatal("allocating memory for domain names", "get_dns_query", NULL);
@@ -118,10 +118,10 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			add_new_pointer(head, NULL, domain_names[j]);
 
 		// get other information
-		word = *(unsigned short*)(query_start + query_offset);
+		word = *(unsigned short *)(query_start + query_offset);
 		queries[j].dns_type = ntohs(word);
 		query_offset += 2;
-		word = *(unsigned short*)(query_start + query_offset);
+		word = *(unsigned short *)(query_start + query_offset);
 		queries[j].dns_class = ntohs(word);
 		query_offset += 2;
 		queries[j].dns_domain_name = domain_names[j];
@@ -143,8 +143,9 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 		return true;
 
 	// initialize response variables
-	struct dns_response_section* additional_records = NULL;
-	additional_records = (struct dns_response_section*)malloc(sizeof(struct dns_response_section) * additional_count);
+	struct dns_response_section *additional_records = NULL;
+	additional_records = (struct dns_response_section *)malloc(sizeof(struct dns_response_section) *
+															   additional_count);
 
 	if(additional_records == NULL)
 		fatal("allocating memory for additional records", "get_dns_query", NULL);
@@ -152,8 +153,8 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 	else
 		add_new_pointer(head, NULL, additional_records);
 
-	char** domain_names_additional = NULL;
-	domain_names_additional = (char**)malloc(sizeof(char*)*additional_count);
+	char **domain_names_additional = NULL;
+	domain_names_additional = (char **)malloc(sizeof(char *) * additional_count);
 
 	if(domain_names_additional == NULL)
 		fatal("allocating memory for additional record domain names", "get_dns_query", NULL);
@@ -167,7 +168,8 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 	}
 
 	// add additional section
-	for(int additional_record_index = 0; additional_record_index < additional_count; additional_record_index++)
+	for(int additional_record_index = 0; additional_record_index < additional_count;
+		additional_record_index++)
 	{
 		byte = *(query_start + query_offset);
 		query_offset++;
@@ -178,7 +180,7 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			struct dns_opt_record opt_record;
 			opt_record.dns_opt_name = 0;
 			opt_record.padding = 0;
-			opt_record.dns_type = ntohs(*(unsigned short*)(query_start + query_offset));
+			opt_record.dns_type = ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
 
 			if(opt_record.dns_type != 41)
@@ -187,23 +189,25 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 				return false;
 			}
 
-			opt_record.dns_udp_payload_size = ntohs(*(unsigned short*)(query_start + query_offset));
+			opt_record.dns_udp_payload_size =
+				ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
-			opt_record.dns_rcode = *(unsigned char*)(query_start + query_offset);
+			opt_record.dns_rcode = *(unsigned char *)(query_start + query_offset);
 			query_offset += 1;
-			opt_record.dns_flags[0] = *(unsigned char*)(query_start + query_offset);
+			opt_record.dns_flags[0] = *(unsigned char *)(query_start + query_offset);
 			query_offset += 1;
-			opt_record.dns_flags[1] = *(unsigned char*)(query_start + query_offset);
+			opt_record.dns_flags[1] = *(unsigned char *)(query_start + query_offset);
 			query_offset += 1;
-			opt_record.dns_flags[2] = *(unsigned char*)(query_start + query_offset);
+			opt_record.dns_flags[2] = *(unsigned char *)(query_start + query_offset);
 			query_offset += 1;
-			short dataLength = ntohs(*(unsigned short*)(query_start + query_offset));
+			short dataLength = ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
 			opt_record.dns_data_length = dataLength;
 
 			if(dataLength != 0)
 			{
-				unsigned char* resource_data = (unsigned char*)malloc(sizeof(unsigned char) * dataLength);
+				unsigned char *resource_data =
+					(unsigned char *)malloc(sizeof(unsigned char) * dataLength);
 
 				if(resource_data == NULL)
 					fatal("allocating memory for resource data", "get_dns_query", NULL);
@@ -221,7 +225,8 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 
 			opt_record.is_opt_record = true;
 
-			additional_records[additional_record_index] = *(struct dns_response_section*)&opt_record;
+			additional_records[additional_record_index] =
+				*(struct dns_response_section *)&opt_record;
 		}
 
 		// normal record
@@ -230,7 +235,8 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			// what was just read is part of the name
 			query_offset--;
 
-			domain_names_additional[additional_record_index] = get_domain_name(query_start, &query_offset);
+			domain_names_additional[additional_record_index] =
+				get_domain_name(query_start, &query_offset);
 
 			if(domain_names_additional[additional_record_index] == NULL)
 			{
@@ -241,20 +247,25 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 			else
 				add_new_pointer(head, NULL, domain_names_additional[additional_record_index]);
 
-			additional_records[additional_record_index].dns_domain_name = domain_names_additional[additional_record_index];
-			additional_records[additional_record_index].dns_type = ntohs(*(unsigned short*)(query_start + query_offset));
+			additional_records[additional_record_index].dns_domain_name =
+				domain_names_additional[additional_record_index];
+			additional_records[additional_record_index].dns_type =
+				ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
-			additional_records[additional_record_index].dns_class = ntohs(*(unsigned short*)(query_start + query_offset));
+			additional_records[additional_record_index].dns_class =
+				ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
-			additional_records[additional_record_index].dns_TTL = ntohl(*(unsigned int*)(query_start + query_offset));
+			additional_records[additional_record_index].dns_TTL =
+				ntohl(*(unsigned int *)(query_start + query_offset));
 			query_offset += 4;
-			short dataLength = ntohs(*(unsigned short*)(query_start + query_offset));
+			short dataLength = ntohs(*(unsigned short *)(query_start + query_offset));
 			query_offset += 2;
 			additional_records[additional_record_index].dns_data_length = dataLength;
 
 			if(dataLength != 0)
 			{
-				unsigned char* resource_data = (unsigned char*)malloc(sizeof(unsigned char) * dataLength);
+				unsigned char *resource_data =
+					(unsigned char *)malloc(sizeof(unsigned char) * dataLength);
 
 				if(resource_data == NULL)
 					fatal("allocating memory for resource data", "get_dns_query", NULL);
@@ -278,12 +289,12 @@ bool get_dns_query(const unsigned char *header_start, struct dns_query** dns_que
 	return true;
 }
 
-bool get_dns_response(const unsigned char *header_start, struct dns_response* dns_response_pointer)
+bool get_dns_response(const unsigned char *header_start, struct dns_response *dns_response_pointer)
 {
 	return false;
 }
 
-char* get_domain_name(const unsigned char* query_start_pointer, int *query_offset)
+char *get_domain_name(const unsigned char *query_start_pointer, int *query_offset)
 {
 	char name[256];
 	int domain_name_length = 0;
@@ -301,7 +312,7 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 			// use offset to get the rest of the name
 			offset -= DNS_COMPRESSION_PTR;
 			int temp_offset = offset;
-			char* temp = get_domain_name(query_start_pointer, &temp_offset);
+			char *temp = get_domain_name(query_start_pointer, &temp_offset);
 
 			if(domain_name_length + temp_offset - offset > 256)
 				return NULL;
@@ -310,12 +321,12 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 			domain_name_length += temp_offset - offset;
 			free(temp);
 
-			char* name_pointer = (char*)malloc(sizeof(char) * domain_name_length);
+			char *name_pointer = (char *)malloc(sizeof(char) * domain_name_length);
 
 			if(name_pointer == NULL)
 				fatal("allocating memory for domain_names", "get_domain_name", NULL);
 
-			strncpy((char*)name_pointer, name, domain_name_length);
+			strncpy((char *)name_pointer, name, domain_name_length);
 			return name_pointer;
 		}
 
@@ -340,7 +351,7 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 
 	name[domain_name_length - 1] = '\0';
 
-	char* name_pointer = (char*)malloc(sizeof(char) * domain_name_length);
+	char *name_pointer = (char *)malloc(sizeof(char) * domain_name_length);
 
 	if(name_pointer == NULL)
 		fatal("allocating memory for domain_names", "get_domain_name", NULL);
@@ -349,19 +360,20 @@ char* get_domain_name(const unsigned char* query_start_pointer, int *query_offse
 	return name_pointer;
 }
 
-void print_dns_query(struct dns_query* dns_query_packet, FILE* outputFilePtr)
+void print_dns_query(struct dns_query *dns_query_packet, FILE *outputFilePtr)
 {
 	// print header
 	struct dns_hdr dns_header = dns_query_packet->dns_header;
 	fprintf(outputFilePtr, "\t\t\t[[  DNS Header  ]]\n");
 	fprintf(outputFilePtr, "\t\t\t[  ID: %hu(%x)  ]\n", dns_header.dns_id, dns_header.dns_id);
 	fprintf(outputFilePtr, "\t\t\t[  Flags(%x):  ]\n", ntohs(dns_header.dns_flags));
-	fprintf(outputFilePtr, "\t\t\t[  \t QR: %hu  \t]\n", (dns_header.dns_flags & DNS_QR)>>15);
-	fprintf(outputFilePtr, "\t\t\t[  \t opcode: %d  ]\n", (dns_header.dns_flags & DNS_OPCODE)>>11);
-	fprintf(outputFilePtr, "\t\t\t[  \t AA: %hu  ]\n", (dns_header.dns_flags & DNS_AA)>>10);
-	fprintf(outputFilePtr, "\t\t\t[  \t TC: %hu  ]\n", (dns_header.dns_flags & DNS_TC)>>9);
-	fprintf(outputFilePtr, "\t\t\t[  \t RD: %hu  ]\n", (dns_header.dns_flags & DNS_RD)>>8);
-	fprintf(outputFilePtr, "\t\t\t[  \t RA: %hu  ]\n", (dns_header.dns_flags & DNS_RA)>>7);
+	fprintf(outputFilePtr, "\t\t\t[  \t QR: %hu  \t]\n", (dns_header.dns_flags & DNS_QR) >> 15);
+	fprintf(outputFilePtr, "\t\t\t[  \t opcode: %d  ]\n",
+			(dns_header.dns_flags & DNS_OPCODE) >> 11);
+	fprintf(outputFilePtr, "\t\t\t[  \t AA: %hu  ]\n", (dns_header.dns_flags & DNS_AA) >> 10);
+	fprintf(outputFilePtr, "\t\t\t[  \t TC: %hu  ]\n", (dns_header.dns_flags & DNS_TC) >> 9);
+	fprintf(outputFilePtr, "\t\t\t[  \t RD: %hu  ]\n", (dns_header.dns_flags & DNS_RD) >> 8);
+	fprintf(outputFilePtr, "\t\t\t[  \t RA: %hu  ]\n", (dns_header.dns_flags & DNS_RA) >> 7);
 	fprintf(outputFilePtr, "\t\t\t[  \t rcode: %hu  ]\n", dns_header.dns_flags & DNS_RCODE);
 	fprintf(outputFilePtr, "\t\t\t[  Question #: %hu  ]\n", dns_header.dns_question_count);
 	fprintf(outputFilePtr, "\t\t\t[  Answer #: %hu  ]\n", dns_header.dns_answer_count);
@@ -371,7 +383,7 @@ void print_dns_query(struct dns_query* dns_query_packet, FILE* outputFilePtr)
 	// print queries
 	struct dns_query_section query;
 	fprintf(outputFilePtr, "\t\t\t[[  DNS Query Section  ]]\n");
-	for(int i = 0;i<dns_header.dns_question_count;i++)
+	for(int i = 0; i < dns_header.dns_question_count; i++)
 	{
 		query = dns_query_packet->dns_queries_list[i];
 		fprintf(outputFilePtr, "\t\t\t\t[[  DNS Query #%d  ]]\n", i + 1);
@@ -399,35 +411,53 @@ void print_dns_query(struct dns_query* dns_query_packet, FILE* outputFilePtr)
 	// print additionals
 	struct dns_response_section response;
 	fprintf(outputFilePtr, "\t\t\t[[  DNS Additional Section  ]]\n");
-	for(int i = 0;i<dns_header.dns_additional_count;i++)
+	for(int i = 0; i < dns_header.dns_additional_count; i++)
 	{
 		response = dns_query_packet->dns_additional_list[i];
 		if(response.is_opt_record)
 		{
 			fprintf(outputFilePtr, "\t\t\t\t[[  DNS Additional #%d (opt record)  ]]\n", i + 1);
-			fprintf(outputFilePtr, "\t\t\t\t[  Domain Name: %d(root)  ]\n", ((struct dns_opt_record*)&response)->dns_opt_name);
-			fprintf(outputFilePtr, "\t\t\t\t[  Type: %hu(%x)  ]\n", response.dns_type, response.dns_type);
-			fprintf(outputFilePtr, "\t\t\t\t[  UDP payload size: %hu  ]\n", ((struct dns_opt_record*)&response)->dns_udp_payload_size);
-			fprintf(outputFilePtr, "\t\t\t\t[  rcode: %x  ]\n", ((struct dns_opt_record*)&response)->dns_rcode);
-			fprintf(outputFilePtr, "\t\t\t\t[  Flags: %x  ]\n", ntohl(*((int*)((struct dns_opt_record*)&response)->dns_flags)>>8));
-			fprintf(outputFilePtr, "\t\t\t\t[  Data Length: %hu  ]\n", ((struct dns_opt_record*)&response)->dns_data_length);
+			fprintf(outputFilePtr, "\t\t\t\t[  Domain Name: %d(root)  ]\n",
+					((struct dns_opt_record *)&response)->dns_opt_name);
+			fprintf(outputFilePtr, "\t\t\t\t[  Type: %hu(%x)  ]\n", response.dns_type,
+					response.dns_type);
+			fprintf(outputFilePtr, "\t\t\t\t[  UDP payload size: %hu  ]\n",
+					((struct dns_opt_record *)&response)->dns_udp_payload_size);
+			fprintf(outputFilePtr, "\t\t\t\t[  rcode: %x  ]\n",
+					((struct dns_opt_record *)&response)->dns_rcode);
+			fprintf(outputFilePtr, "\t\t\t\t[  Flags: %x  ]\n",
+					ntohl(*((int *)((struct dns_opt_record *)&response)->dns_flags) >> 8));
+			fprintf(outputFilePtr, "\t\t\t\t[  Data Length: %hu  ]\n",
+					((struct dns_opt_record *)&response)->dns_data_length);
 			fprintf(outputFilePtr, "\t\t\t\t[  Option Data:  ]\n");
-			pretty_dump(((struct dns_opt_record*)&response)->dns_option_data, ((struct dns_opt_record*)&response)->dns_data_length, outputFilePtr, "\t\t\t\t[  ", "  ]");
+			pretty_dump(((struct dns_opt_record *)&response)->dns_option_data,
+						((struct dns_opt_record *)&response)->dns_data_length, outputFilePtr,
+						"\t\t\t\t[  ", "  ]");
 		}
 		else
 		{
 			fprintf(outputFilePtr, "\t\t\t\t[[  DNS Additional #%d  ]]\n", i + 1);
 			fprintf(outputFilePtr, "\t\t\t\t[  Domain Name: %s  ]\n", response.dns_domain_name);
-			fprintf(outputFilePtr, "\t\t\t\t[  Type: %hu(%x) (  ]\n", response.dns_type, response.dns_type);
+			fprintf(outputFilePtr, "\t\t\t\t[  Type: %hu(%x) (  ]\n", response.dns_type,
+					response.dns_type);
 			// print response dns types
 			fprintf(outputFilePtr, ")  ]\n");
-			fprintf(outputFilePtr, "\t\t\t\t[  Class: %hu(%x) (  ]\n", response.dns_type, response.dns_type);
+			fprintf(outputFilePtr, "\t\t\t\t[  Class: %hu(%x) (  ]\n", response.dns_type,
+					response.dns_type);
 			// print response dns classes
 			fprintf(outputFilePtr, ")  ]\n");
 			fprintf(outputFilePtr, "\t\t\t\t[  TTL: %d  ]\n", response.dns_TTL);
 			fprintf(outputFilePtr, "\t\t\t\t[  Data Length: %hu  ]\n", response.dns_data_length);
 			fprintf(outputFilePtr, "\t\t\t\t[  Resource Data:  ]\n");
-			pretty_dump(response.dns_resource_data, response.dns_data_length, outputFilePtr, "\t\t\t\t[  ", "  ]");
+			pretty_dump(response.dns_resource_data, response.dns_data_length, outputFilePtr,
+						"\t\t\t\t[  ", "  ]");
 		}
 	}
+}
+
+int freeDnsQuery(struct dns_query *dns_query_packet)
+{
+	free(dns_query_packet->dns_queries_list);
+	free(dns_query_packet->dns_additional_list);
+	return 0;
 }

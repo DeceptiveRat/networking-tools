@@ -15,12 +15,15 @@
  * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 
 #include "otherFunctions.h"
+
+volatile sig_atomic_t exit_flag = 0;
+char error_message[ERROR_MESSAGE_SIZE];
 
 int sendString(int sockfd, const unsigned char *buffer, int bytesToSend)
 {
@@ -117,7 +120,8 @@ void dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outp
 	}
 }
 
-void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr, const char *prefix, const char *postfix)
+void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr,
+				 const char *prefix, const char *postfix)
 {
 	unsigned int printLocation = 0;
 	char byte;
@@ -160,7 +164,8 @@ void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FIL
 	}
 }
 
-void hex_stream_dump(const unsigned char *databuffer, const unsigned int length, FILE *outputFilePtr)
+void hex_stream_dump(const unsigned char *databuffer, const unsigned int length,
+					 FILE *outputFilePtr)
 {
 	unsigned int printLocation = 0;
 
@@ -191,9 +196,11 @@ void free_all_pointers(struct allocated_pointers *head)
 	free(prev);
 }
 
-void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers **tail, void *new_pointer)
+void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers **tail,
+					 void *new_pointer)
 {
-	struct allocated_pointers *new_node = (struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
+	struct allocated_pointers *new_node =
+		(struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
 
 	if(new_node == NULL)
 	{
@@ -224,7 +231,8 @@ void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers 
 		*tail = new_node;
 }
 
-void remove_from_list(struct allocated_pointers **head, struct allocated_pointers **tail, void *remove_this)
+void remove_from_list(struct allocated_pointers **head, struct allocated_pointers **tail,
+					  void *remove_this)
 {
 	struct allocated_pointers *current;
 	struct allocated_pointers *previous;
@@ -405,20 +413,20 @@ void cleanMutexes(pthread_mutex_t *mutexes, int mutexCount)
 void gzipCompress(const char *inputFileName)
 {
 #define CHUNK 16384
-	FILE* source = fopen(inputFileName, "rb");
+	FILE *source = fopen(inputFileName, "rb");
 	if(source == NULL)
 		fatal("opening source file", "gzipCompress", stdout);
-	
+
 	char outputFileName[100];
 	strcpy(outputFileName, inputFileName);
 	strcat(outputFileName, ".gz");
 	gzFile destination = gzopen(outputFileName, "wb");
 	if(destination == NULL)
 		fatal("opening destination file", "gzipCompress", stdout);
-	
+
 	unsigned char buffer[CHUNK];
 	int bytes_read = 0;
-	while((bytes_read = fread(buffer, 1, CHUNK, source))>0)
+	while((bytes_read = fread(buffer, 1, CHUNK, source)) > 0)
 	{
 		if(gzwrite(destination, buffer, bytes_read) != bytes_read)
 			fatal("writing data", "gzipCompress", stdout);
@@ -442,4 +450,50 @@ bool isNumber(const char *stringToCheck)
 	}
 
 	return true;
+}
+
+void setExitFlag(int sig)
+{
+	printf("\n%d signal recieved. Setting exit_flag...\n", sig);
+	exit_flag = 1;
+}
+
+bool exitFlagSet()
+{
+	if(exit_flag)
+		return true;
+	else
+		return false;
+}
+
+int SIGINTSetsExitFlag()
+{
+	struct sigaction action;
+	action.sa_handler = *setExitFlag;
+	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	if(sigaction(SIGINT, &action, NULL) == -1)
+	{
+		perror("SIGINTSetsExitFlag");
+		strcpy(error_message, "during sigaction");
+		return -1;
+	}
+
+	return 0;
+}
+
+int SIGINTDefault()
+{
+	struct sigaction action;
+	action.sa_handler = SIG_DFL;
+	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	if(sigaction(SIGINT, &action, NULL) == -1)
+	{
+		perror("SIGINTDefault");
+		strcpy(error_message, "during sigaction");
+		return -1;
+	}
+
+	return 0;
 }

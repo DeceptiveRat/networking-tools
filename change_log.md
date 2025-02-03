@@ -96,9 +96,10 @@
 
 ### change:
 
-## Version 3.2
+## Version 4.1
 ### summary:
-- 
+- in *dnsHandling.h/dnsHandling.c*, instead of *fatal()* being used, functions now return -1 when an error occurs and saves the error message to *error_message*
+- */Internet Simulator/compile.sh* modified to compile *dnsProxy.c* to *dnsProxy* and *httpProxy.c* to *httpProxy*
 
 ### cleanups:
 - f: isNumber
@@ -108,6 +109,23 @@
 #### /Internet Simulator
 - fl: dnsProxy.c
 
+#### /include/otherFunctions.h
+- f: setExitFlag
+- f: exitFlagSet
+- f: SIGINTSetsExitFlag
+- f: SIGINTDefault
+- gv: exit\_flag
+- gv: error\_message
+
+#### /include/dnsHandling.h
+- f: initializeDNSProxy
+- f: handleDNSConnection
+- f: returnUDPListeningSocket
+- f: returnEpollInstance
+
+#### /include/dns.h
+- f: freeDnsQuery
+
 #### /include
 - fl: dnsHandling.h
 - fl: dnsHandling.c
@@ -116,6 +134,7 @@
 ### rename:
 - /include/socketFunctions.h => /include/httpHandling.h
 - /include/socketFunctions.c => /include/httpHandling.c
+- /include/Internet Simulator/http\_proxy.c => /include/Internet Simulator/httpProxy.c
 
 #### /include/httpHandling.h
 - f: handleConnection => handleHTTPConnection
@@ -125,3 +144,6 @@
 - m: CONNECTION\_ESTABLISHED\_MESSAGE\_LENGTH
 
 ### change:
+#### /include/otherFunctions.h
+- m: ERROR\_MESSAGE\_SIZE
+	- now will only be defined if there isn't already a definition for it

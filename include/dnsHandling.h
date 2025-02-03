@@ -23,15 +23,15 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <sys/epoll.h>
+#include <arpa/inet.h>
+
+#include "dns.h"
 
 #define DNS_LISTENING_PORT "5353"
 #define BUFFER_SIZE 2048
 
-// setup functions
-
-// action function
 void initializeDNSProxy();
-void handleDNSConnection(int listening_socket, FILE* output_file_ptr);
-
-// return sockets
-int returnUDPListeningSocket(int* IPv4_listening_socket, int* IPv6_listening_socket);
+int handleDNSConnection(int epoll_fd, int socket_count, FILE* output_file_ptr);
+int returnUDPListeningSocket(int* destination_socket, int address_family);
+int returnEpollInstance(int socket_count, ...);

@@ -16,8 +16,10 @@
  */
 
 #include "otherFunctions.h"
+#include "dnsHandling.h"
 
 int main(int argc, char* argv[])
 {
+	initializeDNSProxy();
     return 0;
 }

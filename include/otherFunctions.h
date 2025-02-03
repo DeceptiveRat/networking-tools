@@ -23,10 +23,17 @@
 #include <math.h>
 #include <zlib.h>
 #include <stdbool.h>
+#include <signal.h>
 
-#define ERROR_MESSAGE_SIZE 200
 #define HEX_STREAM_LENGTH 500
 #define MAX_FILE_POINTERS_NUMBER 5
+
+#ifndef ERROR_MESSAGE_SIZE
+#define ERROR_MESSAGE_SIZE 200
+#endif
+
+extern volatile sig_atomic_t exit_flag;
+extern char error_message[ERROR_MESSAGE_SIZE];
 
 // linked list of allocated pointers for easy deallocation
 struct allocated_pointers
@@ -63,6 +70,12 @@ void bulk_print(const struct FILE_POINTERS files, int argCount, ...);
 void itoa(const int number, char* destination);
 void gzipCompress(const char *inputFileName);
 bool isNumber(const char* stringToCheck);
+
+// signal functions
+void setExitFlag(int sig);
+bool exitFlagSet();
+int SIGINTSetsExitFlag();
+int SIGINTDefault();
 
 // debugging functions
 int hex_stream_to_bytes(char *fileName, unsigned char **packet);
