@@ -21,11 +21,13 @@
 #include "ip.h"
 #include "tcp.h"
 
-char tcp_checksum_matches(const unsigned char *packet_start, unsigned short* checksum)
+int tcpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum)
 {
-	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_start + ETHER_HDR_LEN);
-	struct tcp_hdr* tcp_header = (struct tcp_hdr*)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
-	const unsigned char* data = packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct tcp_hdr);
+	struct ip_hdr *ip_header = (struct ip_hdr *)(packet_start + ETHER_HDR_LEN);
+	struct tcp_hdr *tcp_header =
+		(struct tcp_hdr *)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
+	const unsigned char *data =
+		packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct tcp_hdr);
 
 	unsigned int sum = 0;
 	sum += (ntohl(ip_header->ip_src_addr) >> 16) & 0xFFFF; // source addr
@@ -46,7 +48,8 @@ char tcp_checksum_matches(const unsigned char *packet_start, unsigned short* che
 	sum += ntohs(tcp_header->tcp_urgent);
 
 	// data + options
-	int data_length_bytes = ntohs(ip_header->ip_len) - sizeof(struct ip_hdr) - sizeof(struct tcp_hdr);
+	int data_length_bytes =
+		ntohs(ip_header->ip_len) - sizeof(struct ip_hdr) - sizeof(struct tcp_hdr);
 
 	for(int i = 0; i < data_length_bytes; i += 2)
 	{
@@ -60,15 +63,14 @@ char tcp_checksum_matches(const unsigned char *packet_start, unsigned short* che
 	}
 
 	while(sum >> 16)
-	{
 		sum = (sum & 0xFFFF) + (sum >> 16);
-	}
 
 	*checksum = (~sum) & 0xFFFF;
 	return (*checksum == ntohs(tcp_header->tcp_checksum)) ? 1 : 0;
 }
 
-bool get_tcp_header(const unsigned char *header_start, struct tcp_hdr* destination_header, int *tcp_header_size)
+int getTCPHeader(const unsigned char *header_start, struct tcp_hdr *destination_header,
+				 int *tcp_header_size)
 {
 	unsigned int header_size;
 	struct tcp_hdr tcp_header;
@@ -84,10 +86,10 @@ bool get_tcp_header(const unsigned char *header_start, struct tcp_hdr* destinati
 
 	*destination_header = tcp_header;
 	*tcp_header_size = header_size;
-	return true;
+	return 0;
 }
 
-void print_tcp_header(const struct tcp_hdr *tcp_header, FILE* outputFilePtr)
+void printTCPHeader(const struct tcp_hdr *tcp_header, FILE *outputFilePtr)
 {
 	int header_size = 4 * tcp_header->tcp_offset;
 

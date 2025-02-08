@@ -43,6 +43,9 @@
 - sendResponse function currently defaults to compressing file before sending
 - change naming style to a consistent one, all CamelCase or _
 - add support for DNS over TCP
+- create RB-tree to contain open resources
+- *dns.h* function *printDnsQuery* and *freeDnsQuery* have to be modified. *freeDnsQuery* must properly free the whole query.
+- reduce the number of arguments for functions with too many arguments
 
 - Change README.md to reflect new changes
 - Change the license header in each file

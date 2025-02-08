@@ -19,7 +19,7 @@
 
 #include "ip.h"
 
-bool get_ip_header(const unsigned char *header_start, struct ip_hdr *destination_header)
+int getIPHeader(const unsigned char *header_start, struct ip_hdr *destination_header)
 {
 	// ***IMPORTANT: change code to verify IP later***
 	struct ip_hdr ip_header;
@@ -30,10 +30,10 @@ bool get_ip_header(const unsigned char *header_start, struct ip_hdr *destination
 	ip_header.ip_checksum = ntohs(ip_header.ip_checksum);
 
 	*destination_header = ip_header;
-	return true;
+	return 0;
 }
 
-void print_ip_header(const struct ip_hdr *ip_header, FILE *outputFilePtr)
+void printIPHeader(const struct ip_hdr *ip_header, FILE *outputFilePtr)
 {
 	char addressString[IP_STRING_LEN];
 
