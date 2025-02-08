@@ -17,20 +17,20 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <sys/socket.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
 
 #define UDP_HDR_LEN 8
 struct udp_hdr
 {
-    unsigned short udp_src_port;
-    unsigned short udp_dest_port;
-    unsigned short udp_length;
-    unsigned short udp_checksum;
+	unsigned short udp_src_port;
+	unsigned short udp_dest_port;
+	unsigned short udp_length;
+	unsigned short udp_checksum;
 };
 
-char udp_checksum_matches(const unsigned char *header_start, unsigned short* checksum);
-bool get_udp_header(const unsigned char *header_start, struct udp_hdr* destination_header);
-void print_udp_header(const struct udp_hdr* udp_header, FILE* outputFilePtr);
+int udpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum);
+int getUDPHeader(const unsigned char *packet_start, const int data_offset, struct udp_hdr *destination_header);
+void printUDPHeader(const struct udp_hdr *udp_header, FILE *outputFilePtr);

@@ -16,16 +16,20 @@
  */
 
 #include <pcap.h>
+#include <string.h>
 
 #include "ethernet.h"
 #include "ip.h"
 #include "udp.h"
+#include "otherFunctions.h"
 
-char udp_checksum_matches(const unsigned char *packet_start, unsigned short* checksum)
+int udpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum)
 {
-	struct ip_hdr* ip_header = (struct ip_hdr*)(packet_start + ETHER_HDR_LEN);
-	struct udp_hdr* udp_header = (struct udp_hdr*)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
-	const unsigned char* data = packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct udp_hdr);
+	struct ip_hdr *ip_header = (struct ip_hdr *)(packet_start + ETHER_HDR_LEN);
+	struct udp_hdr *udp_header =
+		(struct udp_hdr *)(packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr));
+	const unsigned char *data =
+		packet_start + ETHER_HDR_LEN + sizeof(struct ip_hdr) + sizeof(struct udp_hdr);
 
 	unsigned int sum = 0;
 	sum += (ntohl(ip_header->ip_src_addr) >> 16) & 0xFFFF; // source addr
@@ -52,28 +56,40 @@ char udp_checksum_matches(const unsigned char *packet_start, unsigned short* che
 	}
 
 	while(sum >> 16)
-	{
 		sum = (sum & 0xFFFF) + (sum >> 16);
-	}
 
 	*checksum = (~sum) & 0xFFFF;
 	return (*checksum == ntohs(udp_header->udp_checksum)) ? 1 : 0;
 }
 
-bool get_udp_header(const unsigned char *header_start, struct udp_hdr* destination_header)
+int getUDPHeader(const unsigned char *packet_start, const int data_offset, struct udp_hdr *destination_header)
 {
+	int status;
+
+	unsigned short checksum;
+	status = udpChecksumMatches(packet_start, &checksum);
+	if(status == -1)
+	{
+		return status;
+	}
+	else if(status == 0)
+	{
+		strcpy(error_message, "UDP checksum verification fail");
+		return -1;
+	}
+
 	struct udp_hdr udp_header;
-	udp_header = *(struct udp_hdr*)header_start;
+	udp_header = *(struct udp_hdr *)packet_start;
 	udp_header.udp_src_port = ntohs(udp_header.udp_src_port);
 	udp_header.udp_dest_port = ntohs(udp_header.udp_dest_port);
 	udp_header.udp_length = ntohs(udp_header.udp_length);
 	udp_header.udp_checksum = ntohs(udp_header.udp_checksum);
 
 	*destination_header = udp_header;
-	return true;
+	return 1;
 }
 
-void print_udp_header(const struct udp_hdr* udp_header, FILE* outputFilePtr)
+void printUDPHeader(const struct udp_hdr *udp_header, FILE *outputFilePtr)
 {
 	fprintf(outputFilePtr, "\t\t[[  UDP Header  ]]\n");
 	fprintf(outputFilePtr, "\t\t[ Src Port: %hu\t", udp_header->udp_src_port);

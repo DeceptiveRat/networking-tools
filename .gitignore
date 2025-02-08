@@ -10,3 +10,6 @@ iSim
 .gdb_history
 server.crt
 server.key
+dnsProxy
+httpProxy
+*.dbg

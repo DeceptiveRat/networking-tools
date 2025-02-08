@@ -16,14 +16,14 @@
  */
 
 #pragma once
-#include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include <zlib.h>
-#include <stdbool.h>
+#include <pthread.h>
 #include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <zlib.h>
 
 #define HEX_STREAM_LENGTH 500
 #define MAX_FILE_POINTERS_NUMBER 5
@@ -43,33 +43,37 @@ struct allocated_pointers
 };
 
 // to easily print to multiple files
-struct FILE_POINTERS
+struct file_pointers
 {
 	int count;
-	FILE* pointers[MAX_FILE_POINTERS_NUMBER];
+	FILE *pointers[MAX_FILE_POINTERS_NUMBER];
 };
 
 // socket functions
-int sendString(int sockfd, const unsigned char *buffer, int bytesToSend);
-int recvLine(int sockfd, unsigned char *destBuffer);
+int sendString(int sockfd, const unsigned char *buffer, int bytes_to_send);
+int recvLine(int sockfd, unsigned char *destination_buffer);
 
 // dump
-void dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr);
-void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr, const char *prefix, const char *postfix);
-void hex_stream_dump(const unsigned char *databuffer, const unsigned int length, FILE *outputFilePtr);
+void dump(const unsigned char *data_buffer, const unsigned int length, FILE *output_file_ptr);
+void formattedDump(const unsigned char *data_buffer, const unsigned int length,
+				   FILE *output_file_ptr, const char *prefix, const char *postfix);
+void hexStreamDump(const unsigned char *data_buffer, const unsigned int length,
+				   FILE *output_file_ptr);
 
 // pointer functions
-void free_all_pointers(struct allocated_pointers *head);
-void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers **tail, void *new_pointer);
-void remove_from_list(struct allocated_pointers **head, struct allocated_pointers **tail, void *remove_this);
-void remove_all_from_list(struct allocated_pointers *head);
+void freeAllPointers(struct allocated_pointers *head);
+void addNewPointer(struct allocated_pointers *head, struct allocated_pointers **tail,
+				   void *new_pointer);
+void removeFromList(struct allocated_pointers **head, struct allocated_pointers **tail,
+					void *remove_this);
+void removeAllFromList(struct allocated_pointers *head);
 
 // etc
-void fatal(const char *message, const char *location, FILE *outputFilePtr);
-void bulk_print(const struct FILE_POINTERS files, int argCount, ...);
-void itoa(const int number, char* destination);
-void gzipCompress(const char *inputFileName);
-bool isNumber(const char* stringToCheck);
+void fatal(const char *message, const char *location, FILE *output_file_ptr);
+void bulkPrint(const struct file_pointers files, int arg_count, ...);
+void itoa(const int number, char *destination);
+void gzipCompress(const char *input_file_name);
+bool isNumber(const char *string_to_check);
 
 // signal functions
 void setExitFlag(int sig);
@@ -78,8 +82,8 @@ int SIGINTSetsExitFlag();
 int SIGINTDefault();
 
 // debugging functions
-int hex_stream_to_bytes(char *fileName, unsigned char **packet);
+int hexStreamToBytes(char *file_name, unsigned char **packet);
 
 // mutex functions
-pthread_mutex_t* setupMutexes(int mutexCount);
-void cleanMutexes(pthread_mutex_t* mutexes, int mutexCount);
+pthread_mutex_t *setupMutexes(int mutex_count);
+void cleanMutexes(pthread_mutex_t *mutexes, int mutex_count);
