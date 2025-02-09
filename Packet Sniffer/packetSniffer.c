@@ -45,13 +45,13 @@ int main()
 		fatal("opening handle", NULL, stdout);
 
 	// open output files
-	FILE* outputFilePtr;
-	outputFilePtr = fopen(OUTPUT_FILE, "w");
-	if(outputFilePtr == NULL)
+	FILE* output_file_ptr;
+	output_file_ptr = fopen(OUTPUT_FILE, "w");
+	if(output_file_ptr == NULL)
 		fatal("opening file", NULL, NULL);
-	FILE* rawOutputFilePtr;
-	rawOutputFilePtr = fopen(RAW_OUTPUT_FILE, "w");
-	if(rawOutputFilePtr == NULL)
+	FILE* raw_output_file_ptr;
+	raw_output_file_ptr = fopen(RAW_OUTPUT_FILE, "w");
+	if(raw_output_file_ptr == NULL)
 		fatal("opening file", NULL, NULL);
 
 	// allocate head for packet list
@@ -63,14 +63,14 @@ int main()
 
 	// arguments for handler function
 	struct pcap_handler_arguments args;
-	args.outputFilePtr = outputFilePtr;
-	args.rawOutputFilePtr = rawOutputFilePtr;
+	args.output_file_ptr = output_file_ptr;
+	args.raw_output_file_ptr = raw_output_file_ptr;
 	args.packet_list_head = head_ptr;
 	args.packet_list_tail = head_ptr;
 	args.captured_count = 0;
 	struct pcap_handler_arguments* arg_ptr = &args;
 	
-	pcap_loop(pcap_handle, CAPTURECOUNT, analyze_caught_packet, (unsigned char*)&arg_ptr);
+	pcap_loop(pcap_handle, CAPTURECOUNT, saveCaughtPacket, (unsigned char*)&arg_ptr);
 
 	pcap_freealldevs(interface_list);
 	printf("Successfully caught all packets\n");
@@ -79,10 +79,10 @@ int main()
 	struct packet_structure* current = head_ptr->next_packet;
 	while(current != NULL)
 	{
-		print_packet(current, outputFilePtr);
+		printPacket(current, output_file_ptr);
 		current = current->next_packet;
 	}
 
-	fclose(outputFilePtr);
+	fclose(output_file_ptr);
 	return 0;
 }

@@ -28,7 +28,7 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	{
 		perror(function_name);
 		strcpy(error_message, "allocating memory");
-		return -1;
+		fatal(error_message, NULL, stdout);
 	}
 	pointers_head->next_pointer = NULL;
 
@@ -39,7 +39,7 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 		free_all_pointers(pointers_head);
 		perror(function_name);
 		strcpy(error_message, "allocating memory");
-		return -1;
+		fatal(error_message, NULL, stdout);
 	}
 	else
 		add_new_pointer(pointers_head, NULL, *query_location_pp);
@@ -56,25 +56,10 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	query_header.dns_answer_count = ntohs(query_header.dns_answer_count);
 	query_header.dns_authority_count = ntohs(query_header.dns_authority_count);
 	query_header.dns_additional_count = ntohs(query_header.dns_additional_count);
-	if((query_header.dns_flags & DNS_QR) != 0)
+	if((query_header.dns_flags & DNS_QR) != 0 || (query_header.dns_flags & DNS_ZERO) != 0 || query_header.dns_answer_count != 0 || query_header.dns_authority_count != 0)
 	{
 		free_all_pointers(pointers_head);
-		return -1;
-	}
-	if((query_header.dns_flags & DNS_ZERO) != 0)
-	{
-		free_all_pointers(pointers_head);
-		return -1;
-	}
-	if(query_header.dns_answer_count != 0)
-	{
-		free_all_pointers(pointers_head);
-		return -1;
-	}
-	if(query_header.dns_authority_count != 0)
-	{
-		free_all_pointers(pointers_head);
-		return -1;
+		return 0;
 	}
 	(*query_location_pp)->dns_header = query_header;
 
@@ -87,7 +72,7 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	if(status != 0)
 	{
 		free_all_pointers(pointers_head);
-		return -1;
+		return 0;
 	}
 
 	int additional_count = query_header.dns_additional_count;
@@ -197,7 +182,7 @@ int fillAdditionalSection(const unsigned char *additional_start, int *data_offse
 	for(int i = 0; i < additional_count; i++)
 	{
 		int byte = *(additional_start + *data_offset);
-		*data_offset++;
+		*(data_offset)++;
 
 		if(byte == 0x00)
 		{
@@ -491,8 +476,10 @@ int parseNormalRecord(const unsigned char *additional_start, int *data_offset,
 	struct dns_response_section additional_record;
 
 	// byte used to check if OPT record is part of the name
-	*data_offset--;
+	(*data_offset)--;
 	status = getDomainName(additional_start, data_offset, &(additional_record.dns_domain_name));
+	if(status == -1)
+		return -1;
 
 	if(additional_record.dns_domain_name == NULL)
 	{

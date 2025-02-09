@@ -25,31 +25,20 @@
 #include "otherFunctions.h"
 #include "packetFunctions.h"
 
-void analyzeCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_header,
+void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_header,
 						 const unsigned char *packet)
 {
 	// initialize local variables
-	const char function_name[] = "analyzeCaughtPacket";
+	const char function_name[] = "saveCaughtPacket";
 	int status;
 
 	int tcp_header_length, total_header_size = 0;
-	unsigned char *pkt_data;
+	int packet_length = cap_header->len;
 
 	// use user arguments
 	struct pcap_handler_arguments *args = *(struct pcap_handler_arguments **)user_args;
 	FILE *output_file_ptr = args->output_file_ptr;
 	FILE *raw_output_file_ptr = args->raw_output_file_ptr;
-
-	// initialize allocated pointers list
-	struct allocated_pointers *pointers_head = NULL;
-	pointers_head = (struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
-	if(pointers_head == NULL)
-	{
-		perror(function_name);
-		strcpy(error_message, "allocating memory");
-		fatal(error_message, NULL, stdout);
-	}
-	pointers_head->next_pointer = NULL;
 
 	struct packet_structure *structured_packet;
 	structured_packet = (struct packet_structure *)malloc(sizeof(struct packet_structure));
@@ -59,72 +48,61 @@ void analyzeCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap
 		strcpy(error_message, "allocating memory");
 		fatal(error_message, NULL, stdout);
 	}
-	add_new_pointer(pointers_head, NULL, structured_packet);
 	memset(structured_packet, 0, sizeof(struct packet_structure));
 
-	fprintf(output_file_ptr, "[%d] Got a %d byte packet\n", args->captured_count, cap_header->len);
+	fprintf(output_file_ptr, "[%d] Got a %d byte packet\n", args->captured_count, packet_length);
 
 	// ============================ get link layer ===================================
-	status = getLinkLayerHeader(&(structured_packet->packet_type), &(structured_packet->link_layer_header),
-					   pointers_head, packet, args->captured_count, output_file_ptr,
-					   raw_output_file_ptr, cap_header->len, &total_header_size);
-	if(status == -1)
+	status = getLinkLayerHeader(&(structured_packet->packet_type), &(structured_packet->link_layer_header), packet, args->captured_count, output_file_ptr, raw_output_file_ptr, packet_length, &total_header_size);
+	if(status == -1 || status == 0)
 	{
-		printf("%s\n", error_message);
+		if(status == -1)
+			printf("%s\n", error_message);
+		saveRemainingBytes(packet_length - total_header_size, structured_packet,
+						   (unsigned char *)(packet + total_header_size));
+		args->captured_count++;
 		return;
 	}
 
 	// ============================ get network layer ===================================
-	status = getNetworkLayerHeader(&(structured_packet->packet_type), &(structured_packet->network_layer_header),
-					   pointers_head, packet, args->captured_count, output_file_ptr,
-					   raw_output_file_ptr, cap_header->len, &total_header_size);
-	if(status == -1)
+	status = getNetworkLayerHeader(&(structured_packet->packet_type), &(structured_packet->network_layer_header), packet, args->captured_count, output_file_ptr, raw_output_file_ptr, packet_length, &total_header_size);
+	if(status == -1 || status == 0)
 	{
-		printf("%s\n", error_message);
+		if(status == -1)
+			printf("%s\n", error_message);
+		saveRemainingBytes(packet_length - total_header_size, structured_packet,
+						   (unsigned char *)(packet + total_header_size));
+		args->captured_count++;
 		return;
 	}
 
 	// ============================ get transport layer ===================================
 
-	pkt_data = (unsigned char *)(packet + total_header_size);
+	status = getTransportLayerHeader(structured_packet, args, &total_header_size, packet, packet_length);
+	if(status == -1 || status == 0)
+	{
+		if(status == -1)
+			printf("%s\n", error_message);
+		saveRemainingBytes(packet_length - total_header_size, structured_packet,
+						   (unsigned char *)(packet + total_header_size));
+		args->captured_count++;
+		return;
+	}
 
 	// ============================ get application layer ===================================
-	struct dns_query *query_ptr = NULL;
-
-	if(ip_header->ip_type == IP_TYPE_UDP)
+	status = getApplicationLayerHeader(structured_packet, args, &total_header_size, packet, packet_length);
+	if(status == -1 || status == 0)
 	{
-		status = getDnsQuery(pkt_data, &query_ptr);
-
-		if(status == 0)
-			saveRemainingBytes((cap_header->len) - total_header_size, structured_packet,
-							   (unsigned char *)(packet + total_header_size));
-		else if(status == -1)
-		{
-			free_all_pointers(pointers_head);
-			printf("[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(output_file_ptr, "[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			dump(packet, cap_header->len, raw_output_file_ptr);
-			return;
-		}
-		else
-		{
-			structured_packet->packet_type |= DNS_QUERY_TYPE;
-			structured_packet->application_layer_structure = query_ptr;
-			structured_packet->remaining_bytes = NULL;
-			structured_packet->remaining_length = 0;
-		}
-	}
-	else
-		saveRemainingBytes((cap_header->len) - total_header_size, structured_packet,
+		if(status == -1)
+			printf("%s\n", error_message);
+		saveRemainingBytes(packet_length - total_header_size, structured_packet,
 						   (unsigned char *)(packet + total_header_size));
+		args->captured_count++;
+		return;
+	}
 
-	fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-	dump(packet, cap_header->len, raw_output_file_ptr);
-	args->packet_list_tail->next_packet = structured_packet;
-	args->packet_list_tail = structured_packet;
-	args->captured_count++;
-	remove_all_from_list(pointers_head);
+	structured_packet->remaining_bytes = NULL;
+	structured_packet->remaining_length = 0;
 	return;
 }
 
@@ -136,31 +114,36 @@ void save_remaining_bytes(const int length, struct packet_structure *structured_
 	memcpy(structured_packet->remaining_bytes, remaining_bytes, length);
 }
 
-void print_packet(const struct packet_structure *packet, FILE *output_file_ptr)
+void print_packet(const struct packet_structure *structured_packet, FILE *output_file_ptr)
 {
+	int packet_type = structured_packet->packet_type;
 	// link layer
-	printEthernetHeader(packet->ethernet_header, output_file_ptr);
+	if(packet_type & ETHERNET_TYPE)
+		printEthernetHeader(structured_packet->link_layer_header, output_file_ptr);
 
 	// network layer
-	int network_type = packet->packet_type & NETWORK_LAYER_TYPE;
-	if(network_type == IP_TYPE)
-		printIPHeader((struct ip_hdr *)packet->network_layer_structure, output_file_ptr);
+	if(packet_type & IP_TYPE)
+		printIPHeader(structured_packet->network_layer_header, output_file_ptr);
 
 	// transport layer
-	int transport_type = packet->packet_type & TRANSPORT_LAYER_TYPE;
-	if(transport_type == TCP_TYPE)
-		printTCPHeader((struct tcp_hdr *)packet->transport_layer_structure, output_file_ptr);
-	else if(transport_type == UDP_TYPE)
-		printUDPHeader((struct udp_hdr *)packet->transport_layer_structure, output_file_ptr);
+	if(packet_type & TCP_TYPE)
+		printTCPHeader(structured_packet->transport_layer_header, output_file_ptr);
+	else if(packet_type & UDP_TYPE)
+		printUDPHeader(structured_packet->transport_layer_header, output_file_ptr);
 
 	// application layer
-	int application_type = packet->packet_type & APPLICATION_LAYER_TYPE;
-	if(application_type == DNS_QUERY_TYPE)
-		printDnsQuery((struct dns_query *)packet->application_layer_structure, output_file_ptr);
+	if(packet_type & DNS_QUERY_TYPE)
+		printDnsQuery(structured_packet->application_layer_header, output_file_ptr);
+	
+	if(structured_packet->remaining_length != 0)
+	{
+		fprintf(output_file_ptr, "printing remaining bytes\n");
+		dump(structured_packet->remaining_bytes, structured_packet->remaining_length, output_file_ptr);
+	}
 }
 
 int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
-					   struct allocated_pointers *pointers_head, const unsigned char *packet,
+					   const unsigned char *packet,
 					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
 					   const int packet_length, int *total_header_size)
 {
@@ -176,15 +159,11 @@ int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
 		strcpy(error_message, "allocating memory");
 		fatal(error_message, NULL, stdout);
 	}
-	add_new_pointer(pointers_head, NULL, ethernet_header);
 
 	status = getEthernetHeader(packet, ethernet_header);
 	if(status == -1)
 	{
-		printf("[%d] Error: %s\n", captured_count, error_message);
-		fprintf(output_file_ptr, "[%d] Error: %s\n", captured_count, error_message);
-		fprintf(raw_output_file_ptr, "[%d] packet dump:\n", captured_count);
-		dump(packet, packet_length, raw_output_file_ptr);
+		free(ethernet_header);
 		return -1;
 	}
 	else if(status == 1)
@@ -194,21 +173,22 @@ int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
 		*total_header_size += ETHER_HDR_LEN;
 		return 1;
 	}
-	free(ethernet_header);
 
 	// try other protocols
+
+	free(ethernet_header);
 	return 0;
 }
 
 int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
-					   struct allocated_pointers *pointers_head, const unsigned char *packet,
+					   const unsigned char *packet,
 					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
 					   const int packet_length, int *total_header_size)
 {
 	const char function_name[] = "getNetworkLayerHeader";
 	int status;
 
-	if(packet_type && LINK_LAYER_TYPE != ETHERNET_TYPE)
+	if(*packet_type & ETHERNET_TYPE)
 	{
 		perror(function_name);
 		strcpy(error_message, "wrong link layer type");
@@ -223,15 +203,11 @@ int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
 		strcpy(error_message, "allocating memory");
 		fatal(error_message, NULL, stdout);
 	}
-	add_new_pointer(pointers_head, NULL, ip_header);
 
 	status = getIPHeader(packet + *total_header_size, ip_header);
 	if(status == -1)
 	{
-		printf("[%d] Error: %s\n", captured_count, error_message);
-		fprintf(output_file_ptr, "[%d] Error: %s\n", captured_count, error_message);
-		fprintf(raw_output_file_ptr, "[%d] packet dump:\n", captured_count);
-		dump(packet, packet_length, raw_output_file_ptr);
+		free(ip_header);
 		return -1;
 	}
 	else if(status == 1)
@@ -242,15 +218,16 @@ int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
 		return 1;
 	}
 
+	free(ip_header);
 	return 0;
 }
 
-int getTransportLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, struct allocated_pointers *pointers_head, int *total_header_size, const unsigned char *packet)
+int getTransportLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length)
 {
 	const char function_name[] = "getTransportLayerHeader";
 	int status;
 
-	if(structured_packet->packet_type && NETWORK_LAYER_TYPE != IP_TYPE)
+	if(structured_packet->packet_type & IP_TYPE)
 	{
 		perror(function_name);
 		strcpy(error_message, "wrong network layer type");
@@ -262,97 +239,106 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 
 	if(((struct ip_hdr*)(structured_packet->network_layer_header))->ip_type == IP_TYPE_TCP)
 	{
-		transport_layer_header = (struct tcp_hdr *)malloc(TCP_HDR_LEN);
+		status = tcpChecksumMatches(packet, &checksum);
+		if(status == 0)
+		{
+			fprintf(args->raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
+			hex_stream_dump(packet, packet_length, args->raw_output_file_ptr);
+			perror(function_name);
+			strcpy(error_message, "checksum doesn't match");
+			return -1;
+		}
+		else if(status == -1)
+			return -1;
+
+		transport_layer_header = malloc(TCP_HDR_LEN);
 		if(transport_layer_header == NULL)
 		{
 			perror(function_name);
 			strcpy(error_message, "allocating memory");
 			fatal(error_message, NULL, stdout);
 		}
-		add_new_pointer(pointers_head, NULL, transport_layer_header);
 
 		int tcp_header_length;
-		getTCPHeader(packet + *total_header_size, transport_layer_header, &tcp_header_length);
-		structured_packet->transport_layer_header = transport_layer_header;
-		structured_packet->packet_type |= TCP_TYPE;
-		*total_header_size += tcp_header_length;
-
-		status = tcpChecksumMatches(packet, &checksum);
+		status = getTCPHeader(packet + *total_header_size, transport_layer_header, &tcp_header_length);
 		if(status == 0)
 		{
-			free_all_pointers(pointers_head);
-			fprintf(output_file_ptr, "checksum doesn't match\n");
-			fprintf(output_file_ptr, "TCP packet dropped.\n");
-			fprintf(output_file_ptr, "expected: %hu\n", checksum);
-			fprintf(output_file_ptr, "got: %hu\n", tcp_header->tcp_checksum);
-			fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			dump(packet, cap_header->len, raw_output_file_ptr);
-			args->captured_count++;
-			return;
+			strcpy(error_message, "IP protocol doesn't match actual transport layer protocol");
+			free(transport_layer_header);
+			return -1;
 		}
 		else if(status == -1)
 		{
-			free_all_pointers(pointers_head);
-			printf("[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(output_file_ptr, "[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			dump(packet, cap_header->len, raw_output_file_ptr);
-			return;
+			free(transport_layer_header);
+			return -1;
 		}
+		structured_packet->transport_layer_header = transport_layer_header;
+		structured_packet->packet_type |= TCP_TYPE;
+		*total_header_size += tcp_header_length;
 	}
-
-	else if(ip_header->ip_type == IP_TYPE_UDP)
+	else if(((struct ip_hdr*)(structured_packet->network_layer_header))->ip_type == IP_TYPE_UDP)
 	{
-		udp_header = (struct udp_hdr *)malloc(UDP_HDR_LEN);
-		if(udp_header == NULL)
+		status = udpChecksumMatches(packet, &checksum);
+		if(status == 0)
+		{
+			fprintf(args->raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
+			hex_stream_dump(packet, packet_length, args->raw_output_file_ptr);
+			perror(function_name);
+			strcpy(error_message, "checksum doesn't match");
+			return -1;
+		}
+		else if(status == -1)
+			return -1;
+
+		transport_layer_header = malloc(UDP_HDR_LEN);
+		if(transport_layer_header == NULL)
 		{
 			perror(function_name);
 			strcpy(error_message, "allocating memory");
 			fatal(error_message, NULL, stdout);
 		}
-		add_new_pointer(pointers_head, &pointers_tail, udp_header);
 
-		getUDPHeader(packet + total_header_size, udp_header);
-		structured_packet->transport_layer_structure = udp_header;
-		structured_packet->packet_type |= UDP_TYPE;
-		total_header_size += UDP_HDR_LEN;
-
-		status = udpChecksumMatches(packet, &checksum);
+		status = getUDPHeader(packet + *total_header_size, transport_layer_header);
 		if(status == 0)
 		{
-			free_all_pointers(pointers_head);
-			fprintf(output_file_ptr, "checksum doesn't match\n");
-			fprintf(output_file_ptr, "UDP packet dropped.\n");
-			fprintf(output_file_ptr, "expected: %hu\n", checksum);
-			fprintf(output_file_ptr, "got: %hu\n", udp_header->udp_checksum);
-			fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			dump(packet, cap_header->len, raw_output_file_ptr);
-			args->captured_count++;
-			return;
+			strcpy(error_message, "IP protocol doesn't match actual transport layer protocol");
+			free(transport_layer_header);
+			return -1;
 		}
 		else if(status == -1)
 		{
-			free_all_pointers(pointers_head);
-			printf("[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(output_file_ptr, "[%d] Error: %s\n", args->captured_count, error_message);
-			fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			dump(packet, cap_header->len, raw_output_file_ptr);
-			return;
+			free(transport_layer_header);
+			return -1;
 		}
+		
+		structured_packet->transport_layer_header = transport_layer_header;
+		structured_packet->packet_type |= UDP_TYPE;
+		total_header_size += UDP_HDR_LEN;
 	}
-
 	else
-	{
-		fprintf(output_file_ptr, "unknown type\n");
-		saveRemainingBytes((cap_header->len) - total_header_size, structured_packet,
-						   (unsigned char *)(packet + total_header_size));
+		return 0;
 
-		remove_all_from_list(pointers_head);
-		fprintf(raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-		dump(packet, cap_header->len, raw_output_file_ptr);
-		args->packet_list_tail->next_packet = structured_packet;
-		args->packet_list_tail = structured_packet;
-		args->captured_count++;
-		return;
+	return 1;
+}
+
+int getApplicationLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length)
+{
+	const char function_name[] = "getApplicationLayerHeader";
+	int status;
+
+	if(structured_packet->packet_type & UDP_TYPE)
+	{
+		status = getDnsQuery((unsigned char*)(packet + *total_header_size), (struct dns_query**)(&structured_packet->application_layer_header));
+		if(status == 1)
+		{
+			structured_packet->packet_type |= DNS_QUERY_TYPE;
+			return 1;
+		}
+		else if(status == -1)
+			return -1;
 	}
+	
+	// other protocols
+
+	return 0;
 }

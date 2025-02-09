@@ -234,17 +234,23 @@
 ### /include/packetFunctions.h
 - v: *outputFilePtr => output_file_ptr*
 - v: *rawOutputFilePtr => raw_output_file_ptr*
-- f: *analyze_caught_packets => analyzeCaughtPackets*
+- f: *analyze_caught_packets => saveCaughtPackets*
 	- v: *head => pointers_head*
 	- v: *tail => pointers_tail*
 	- v: *saved_packet => structured_packet*
 - f: *save_remaining_bytes => saveRemainingBytes*
 - f: *print_packet => printPacket*
-- s: packet_structure
+	- v: *packet => structured_packet*
+- s: *packet_structure*
 	- v: *ethernet_header => link_layer_header*
 	- v: *network_layer_structure => network_layer_header*
 	- v: *transport_layer_structure => transport_layer_header*
 	- v: *application_layer_structure => application_layer_header*
+
+### /Packet Sniffer/packetSniffer.c
+- f: *main*
+	- v: *outputFilePtr => output_file_ptr*
+	- v: *rawOutputFilePtr => raw_output_file_ptr*
 
 ## remove:
 

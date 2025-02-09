@@ -62,17 +62,18 @@ struct packet_structure
 	struct packet_structure *next_packet;
 };
 
-void analyzeCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_header,
+void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_header,
 						 const unsigned char *packet);
 int saveRemainingBytes(const int length, struct packet_structure *saved_packet,
 					   const unsigned char *remaining_bytes);
 int printPacket(const struct packet_structure *packet, FILE *outputFilePtr);
 int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
-					   struct allocated_pointers *pointers_head, const unsigned char *packet,
+					   const unsigned char *packet,
 					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
 					   const int packet_length, int *total_header_size);
 int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
-					   struct allocated_pointers *pointers_head, const unsigned char *packet,
+					   const unsigned char *packet,
 					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
 					   const int packet_length, int *total_header_size);
-int getTransportLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, struct allocated_pointers *pointers_head, int *total_header_size, const unsigned char *packet);
+int getTransportLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length);
+int getApplicationLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length);
