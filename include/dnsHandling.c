@@ -196,10 +196,10 @@ int handleDNSConnection(int epoll_fd, int socket_count, FILE *output_file_ptr)
 			dump((unsigned char*)buffer, bytes_received, output_file_ptr);
 
 			struct dns_query* dns_structure;
-			if(get_dns_query((unsigned char*)buffer, &dns_structure) == false)
+			if(getDnsQuery((unsigned char*)buffer, &dns_structure) == false)
 				continue;
-			print_dns_query(dns_structure, stdout);
-			print_dns_query(dns_structure, output_file_ptr);
+			printDnsQuery(dns_structure, stdout);
+			printDnsQuery(dns_structure, output_file_ptr);
 			freeDnsQuery(dns_structure);
 		}
 	}

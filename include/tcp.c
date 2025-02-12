@@ -16,10 +16,12 @@
  */
 
 #include <pcap.h>
+#include <string.h>
 
 #include "ethernet.h"
 #include "ip.h"
 #include "tcp.h"
+#include "otherFunctions.h"
 
 int tcpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum)
 {
@@ -69,12 +71,26 @@ int tcpChecksumMatches(const unsigned char *packet_start, unsigned short *checks
 	return (*checksum == ntohs(tcp_header->tcp_checksum)) ? 1 : 0;
 }
 
-int getTCPHeader(const unsigned char *header_start, struct tcp_hdr *destination_header,
+int getTCPHeader(const unsigned char *packet_start, const int data_offset, struct tcp_hdr *destination_header,
 				 int *tcp_header_size)
 {
+	int status;
+
+	unsigned short checksum;
+	status = tcpChecksumMatches(packet_start, &checksum);
+	if(status == -1)
+	{
+		return status;
+	}
+	else if(status == 0)
+	{
+		strcpy(error_message, "TCP checksum verification fail");
+		return -1;
+	}
+
 	unsigned int header_size;
 	struct tcp_hdr tcp_header;
-	tcp_header = *(const struct tcp_hdr *)header_start;
+	tcp_header = *(const struct tcp_hdr *)(packet_start + data_offset);
 	header_size = 4 * tcp_header.tcp_offset;
 	tcp_header.tcp_src_port = ntohs(tcp_header.tcp_src_port);
 	tcp_header.tcp_dest_port = ntohs(tcp_header.tcp_dest_port);
@@ -86,7 +102,7 @@ int getTCPHeader(const unsigned char *header_start, struct tcp_hdr *destination_
 
 	*destination_header = tcp_header;
 	*tcp_header_size = header_size;
-	return 0;
+	return 1;
 }
 
 void printTCPHeader(const struct tcp_hdr *tcp_header, FILE *outputFilePtr)

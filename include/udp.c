@@ -16,10 +16,12 @@
  */
 
 #include <pcap.h>
+#include <string.h>
 
 #include "ethernet.h"
 #include "ip.h"
 #include "udp.h"
+#include "otherFunctions.h"
 
 int udpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum)
 {
@@ -60,8 +62,22 @@ int udpChecksumMatches(const unsigned char *packet_start, unsigned short *checks
 	return (*checksum == ntohs(udp_header->udp_checksum)) ? 1 : 0;
 }
 
-int getUDPHeader(const unsigned char *packet_start, struct udp_hdr *destination_header)
+int getUDPHeader(const unsigned char *packet_start, const int data_offset, struct udp_hdr *destination_header)
 {
+	int status;
+
+	unsigned short checksum;
+	status = udpChecksumMatches(packet_start, &checksum);
+	if(status == -1)
+	{
+		return status;
+	}
+	else if(status == 0)
+	{
+		strcpy(error_message, "UDP checksum verification fail");
+		return -1;
+	}
+
 	struct udp_hdr udp_header;
 	udp_header = *(struct udp_hdr *)packet_start;
 	udp_header.udp_src_port = ntohs(udp_header.udp_src_port);
@@ -70,7 +86,7 @@ int getUDPHeader(const unsigned char *packet_start, struct udp_hdr *destination_
 	udp_header.udp_checksum = ntohs(udp_header.udp_checksum);
 
 	*destination_header = udp_header;
-	return 0;
+	return 1;
 }
 
 void printUDPHeader(const struct udp_hdr *udp_header, FILE *outputFilePtr)

@@ -26,13 +26,13 @@
 #include "packetFunctions.h"
 
 void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_header,
-						 const unsigned char *packet)
+					  const unsigned char *packet)
 {
 	// initialize local variables
 	const char function_name[] = "saveCaughtPacket";
 	int status;
 
-	int tcp_header_length, total_header_size = 0;
+	int total_header_size = 0;
 	int packet_length = cap_header->len;
 
 	// use user arguments
@@ -53,7 +53,10 @@ void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_he
 	fprintf(output_file_ptr, "[%d] Got a %d byte packet\n", args->captured_count, packet_length);
 
 	// ============================ get link layer ===================================
-	status = getLinkLayerHeader(&(structured_packet->packet_type), &(structured_packet->link_layer_header), packet, args->captured_count, output_file_ptr, raw_output_file_ptr, packet_length, &total_header_size);
+	status =
+		getLinkLayerHeader(&(structured_packet->packet_type),
+						   &(structured_packet->link_layer_header), packet, args->captured_count,
+						   output_file_ptr, raw_output_file_ptr, packet_length, &total_header_size);
 	if(status == -1 || status == 0)
 	{
 		if(status == -1)
@@ -61,11 +64,16 @@ void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_he
 		saveRemainingBytes(packet_length - total_header_size, structured_packet,
 						   (unsigned char *)(packet + total_header_size));
 		args->captured_count++;
+		args->packet_list_tail->next_packet = structured_packet;
+		args->packet_list_tail = structured_packet;
 		return;
 	}
 
 	// ============================ get network layer ===================================
-	status = getNetworkLayerHeader(&(structured_packet->packet_type), &(structured_packet->network_layer_header), packet, args->captured_count, output_file_ptr, raw_output_file_ptr, packet_length, &total_header_size);
+	status = getNetworkLayerHeader(&(structured_packet->packet_type),
+								   &(structured_packet->network_layer_header), packet,
+								   args->captured_count, output_file_ptr, raw_output_file_ptr,
+								   packet_length, &total_header_size);
 	if(status == -1 || status == 0)
 	{
 		if(status == -1)
@@ -73,12 +81,15 @@ void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_he
 		saveRemainingBytes(packet_length - total_header_size, structured_packet,
 						   (unsigned char *)(packet + total_header_size));
 		args->captured_count++;
+		args->packet_list_tail->next_packet = structured_packet;
+		args->packet_list_tail = structured_packet;
 		return;
 	}
 
 	// ============================ get transport layer ===================================
 
-	status = getTransportLayerHeader(structured_packet, args, &total_header_size, packet, packet_length);
+	status =
+		getTransportLayerHeader(structured_packet, args, &total_header_size, packet, packet_length);
 	if(status == -1 || status == 0)
 	{
 		if(status == -1)
@@ -86,11 +97,14 @@ void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_he
 		saveRemainingBytes(packet_length - total_header_size, structured_packet,
 						   (unsigned char *)(packet + total_header_size));
 		args->captured_count++;
+		args->packet_list_tail->next_packet = structured_packet;
+		args->packet_list_tail = structured_packet;
 		return;
 	}
 
 	// ============================ get application layer ===================================
-	status = getApplicationLayerHeader(structured_packet, args, &total_header_size, packet, packet_length);
+	status = getApplicationLayerHeader(structured_packet, args, &total_header_size, packet,
+									   packet_length);
 	if(status == -1 || status == 0)
 	{
 		if(status == -1)
@@ -98,23 +112,28 @@ void saveCaughtPacket(unsigned char *user_args, const struct pcap_pkthdr *cap_he
 		saveRemainingBytes(packet_length - total_header_size, structured_packet,
 						   (unsigned char *)(packet + total_header_size));
 		args->captured_count++;
+		args->packet_list_tail->next_packet = structured_packet;
+		args->packet_list_tail = structured_packet;
 		return;
 	}
 
 	structured_packet->remaining_bytes = NULL;
 	structured_packet->remaining_length = 0;
+	args->packet_list_tail->next_packet = structured_packet;
+	args->packet_list_tail = structured_packet;
 	return;
 }
 
-void save_remaining_bytes(const int length, struct packet_structure *structured_packet,
-						  const unsigned char *remaining_bytes)
+int saveRemainingBytes(const int length, struct packet_structure *structured_packet,
+					   const unsigned char *remaining_bytes)
 {
 	structured_packet->remaining_length = length;
 	structured_packet->remaining_bytes = (unsigned char *)malloc(length);
 	memcpy(structured_packet->remaining_bytes, remaining_bytes, length);
+	return 0;
 }
 
-void print_packet(const struct packet_structure *structured_packet, FILE *output_file_ptr)
+int printPacket(const struct packet_structure *structured_packet, FILE *output_file_ptr)
 {
 	int packet_type = structured_packet->packet_type;
 	// link layer
@@ -134,16 +153,18 @@ void print_packet(const struct packet_structure *structured_packet, FILE *output
 	// application layer
 	if(packet_type & DNS_QUERY_TYPE)
 		printDnsQuery(structured_packet->application_layer_header, output_file_ptr);
-	
+
 	if(structured_packet->remaining_length != 0)
 	{
 		fprintf(output_file_ptr, "printing remaining bytes\n");
-		dump(structured_packet->remaining_bytes, structured_packet->remaining_length, output_file_ptr);
+		hex_stream_dump(structured_packet->remaining_bytes, structured_packet->remaining_length,
+			 output_file_ptr);
 	}
+
+	return 0;
 }
 
-int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
-					   const unsigned char *packet,
+int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp, const unsigned char *packet,
 					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
 					   const int packet_length, int *total_header_size)
 {
@@ -181,14 +202,14 @@ int getLinkLayerHeader(int *packet_type, void **link_layer_header_pp,
 }
 
 int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
-					   const unsigned char *packet,
-					   const int captured_count, FILE *output_file_ptr, FILE *raw_output_file_ptr,
-					   const int packet_length, int *total_header_size)
+						  const unsigned char *packet, const int captured_count,
+						  FILE *output_file_ptr, FILE *raw_output_file_ptr, const int packet_length,
+						  int *total_header_size)
 {
 	const char function_name[] = "getNetworkLayerHeader";
 	int status;
 
-	if(*packet_type & ETHERNET_TYPE)
+	if(!(*packet_type & ETHERNET_TYPE))
 	{
 		perror(function_name);
 		strcpy(error_message, "wrong link layer type");
@@ -222,12 +243,14 @@ int getNetworkLayerHeader(int *packet_type, void **network_layer_header_pp,
 	return 0;
 }
 
-int getTransportLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length)
+int getTransportLayerHeader(struct packet_structure *structured_packet,
+							struct pcap_handler_arguments *args, int *total_header_size,
+							const unsigned char *packet, const int packet_length)
 {
 	const char function_name[] = "getTransportLayerHeader";
 	int status;
 
-	if(structured_packet->packet_type & IP_TYPE)
+	if(!(structured_packet->packet_type & IP_TYPE))
 	{
 		perror(function_name);
 		strcpy(error_message, "wrong network layer type");
@@ -235,22 +258,9 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 	}
 
 	void *transport_layer_header;
-	unsigned short checksum;
 
-	if(((struct ip_hdr*)(structured_packet->network_layer_header))->ip_type == IP_TYPE_TCP)
+	if(((struct ip_hdr *)(structured_packet->network_layer_header))->ip_type == IP_TYPE_TCP)
 	{
-		status = tcpChecksumMatches(packet, &checksum);
-		if(status == 0)
-		{
-			fprintf(args->raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			hex_stream_dump(packet, packet_length, args->raw_output_file_ptr);
-			perror(function_name);
-			strcpy(error_message, "checksum doesn't match");
-			return -1;
-		}
-		else if(status == -1)
-			return -1;
-
 		transport_layer_header = malloc(TCP_HDR_LEN);
 		if(transport_layer_header == NULL)
 		{
@@ -260,10 +270,11 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 		}
 
 		int tcp_header_length;
-		status = getTCPHeader(packet + *total_header_size, transport_layer_header, &tcp_header_length);
+		status =
+			getTCPHeader(packet, *total_header_size, transport_layer_header, &tcp_header_length);
 		if(status == 0)
 		{
-			strcpy(error_message, "IP protocol doesn't match actual transport layer protocol");
+			strcpy(error_message, "IP header protocol field doesn't match actual transport layer protocol");
 			free(transport_layer_header);
 			return -1;
 		}
@@ -276,20 +287,8 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 		structured_packet->packet_type |= TCP_TYPE;
 		*total_header_size += tcp_header_length;
 	}
-	else if(((struct ip_hdr*)(structured_packet->network_layer_header))->ip_type == IP_TYPE_UDP)
+	else if(((struct ip_hdr *)(structured_packet->network_layer_header))->ip_type == IP_TYPE_UDP)
 	{
-		status = udpChecksumMatches(packet, &checksum);
-		if(status == 0)
-		{
-			fprintf(args->raw_output_file_ptr, "[%d] packet dump:\n", args->captured_count);
-			hex_stream_dump(packet, packet_length, args->raw_output_file_ptr);
-			perror(function_name);
-			strcpy(error_message, "checksum doesn't match");
-			return -1;
-		}
-		else if(status == -1)
-			return -1;
-
 		transport_layer_header = malloc(UDP_HDR_LEN);
 		if(transport_layer_header == NULL)
 		{
@@ -298,10 +297,10 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 			fatal(error_message, NULL, stdout);
 		}
 
-		status = getUDPHeader(packet + *total_header_size, transport_layer_header);
+		status = getUDPHeader(packet, *total_header_size, transport_layer_header);
 		if(status == 0)
 		{
-			strcpy(error_message, "IP protocol doesn't match actual transport layer protocol");
+			strcpy(error_message, "IP header protocol field doesn't match actual transport layer protocol");
 			free(transport_layer_header);
 			return -1;
 		}
@@ -310,7 +309,7 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 			free(transport_layer_header);
 			return -1;
 		}
-		
+
 		structured_packet->transport_layer_header = transport_layer_header;
 		structured_packet->packet_type |= UDP_TYPE;
 		total_header_size += UDP_HDR_LEN;
@@ -321,14 +320,16 @@ int getTransportLayerHeader(struct packet_structure* structured_packet, struct p
 	return 1;
 }
 
-int getApplicationLayerHeader(struct packet_structure* structured_packet, struct pcap_handler_arguments *args, int *total_header_size, const unsigned char *packet, const int packet_length)
+int getApplicationLayerHeader(struct packet_structure *structured_packet,
+							  struct pcap_handler_arguments *args, int *total_header_size,
+							  const unsigned char *packet, const int packet_length)
 {
-	const char function_name[] = "getApplicationLayerHeader";
 	int status;
 
 	if(structured_packet->packet_type & UDP_TYPE)
 	{
-		status = getDnsQuery((unsigned char*)(packet + *total_header_size), (struct dns_query**)(&structured_packet->application_layer_header));
+		status = getDnsQuery((unsigned char *)(packet + *total_header_size),
+							 (struct dns_query **)(&structured_packet->application_layer_header));
 		if(status == 1)
 		{
 			structured_packet->packet_type |= DNS_QUERY_TYPE;
@@ -337,7 +338,7 @@ int getApplicationLayerHeader(struct packet_structure* structured_packet, struct
 		else if(status == -1)
 			return -1;
 	}
-	
+
 	// other protocols
 
 	return 0;

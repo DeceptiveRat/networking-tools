@@ -30,7 +30,7 @@ int getIPHeader(const unsigned char *header_start, struct ip_hdr *destination_he
 	ip_header.ip_checksum = ntohs(ip_header.ip_checksum);
 
 	*destination_header = ip_header;
-	return 0;
+	return 1;
 }
 
 void printIPHeader(const struct ip_hdr *ip_header, FILE *outputFilePtr)

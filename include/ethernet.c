@@ -18,7 +18,7 @@
 
 #include "ethernet.h"
 
-int getEthernerHeader(const unsigned char *header_start, struct ether_hdr *destination_header)
+int getEthernetHeader(const unsigned char *header_start, struct ether_hdr *destination_header)
 {
 	// ***IMPORTANT: change code to verify ethernet later***
 	struct ether_hdr ethernet_header;
@@ -26,7 +26,7 @@ int getEthernerHeader(const unsigned char *header_start, struct ether_hdr *desti
 	ethernet_header.ether_type = ntohs(ethernet_header.ether_type);
 
 	*destination_header = ethernet_header;
-	return 0;
+	return 1;
 }
 
 void printEthernetHeader(const struct ether_hdr *ethernet_header, FILE *outputFilePtr)

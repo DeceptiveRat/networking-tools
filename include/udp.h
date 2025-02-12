@@ -32,5 +32,5 @@ struct udp_hdr
 };
 
 int udpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum);
-int getUDPHeader(const unsigned char *packet_start, struct udp_hdr *destination_header);
+int getUDPHeader(const unsigned char *packet_start, const int data_offset, struct udp_hdr *destination_header);
 void printUDPHeader(const struct udp_hdr *udp_header, FILE *outputFilePtr);

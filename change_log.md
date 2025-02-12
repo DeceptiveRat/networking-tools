@@ -224,11 +224,13 @@
 ### /include/tcp.h
 - f: *tcp_checksum_matches => tcpChecksumMatches*
 - f: *get_tcp_header => getTCPHeader*
+	- v: *header_start => packet_start*
 - f: *print_tcp_header => printTCPHeader*
 
 ### /include/udp.h
 - f: *udp_checksum_matches => udpChecksumMatches*
 - f: *get_udp_header => getUDPHeader*
+	- v: *header_start => packet_start*
 - f: *print_udp_header => printUDPHeader*
 
 ### /include/packetFunctions.h
@@ -280,6 +282,7 @@
 	
 - f: *getTCPHeader*
 	- return type bool => int
+	- checksum verfication is now handled here
 	
 ### /include/udp.h
 - f: *udpChecksumMatches*
@@ -287,6 +290,7 @@
 	
 - f: *getUDPHeader*
 	- return type bool => int
+	- checksum verfication is now handled here
 	
 ### /include/packetFunctions.h
 - f: *analyzeCaughtPacket*

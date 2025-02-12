@@ -15,5 +15,5 @@ find . -name "*.h" | while read -r header_file; do
 done
 cd "$startDirectory"
 gcc -I../include -c packetSniffer.c -o packetSniffer.o -Wall -g
-gcc ../include/*.o packetSniffer.o -o packetSniffer -lpcap
+gcc ../include/*.o packetSniffer.o -o packetSniffer -lpcap -lz -lm
 exit

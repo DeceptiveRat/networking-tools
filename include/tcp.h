@@ -50,6 +50,6 @@ struct tcp_hdr_options
 };
 
 int tcpChecksumMatches(const unsigned char *packet_start, unsigned short *checksum);
-int getTCPHeader(const unsigned char *header_start, struct tcp_hdr *destination_header,
+int getTCPHeader(const unsigned char *packet_start, const int data_offset, struct tcp_hdr *destination_header,
 				 int *tcp_header_size);
 void printTCPHeader(const struct tcp_hdr *tcp_header, FILE *outputFilePtr);

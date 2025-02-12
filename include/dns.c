@@ -22,7 +22,7 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	const char function_name[] = "getDnsQuery";
 	int status;
 	// create pointer structure
-	struct allocated_pointers *pointers_head = NULL;
+	struct allocated_pointers* pointers_head;
 	pointers_head = (struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
 	if(pointers_head == NULL)
 	{
@@ -182,7 +182,7 @@ int fillAdditionalSection(const unsigned char *additional_start, int *data_offse
 	for(int i = 0; i < additional_count; i++)
 	{
 		int byte = *(additional_start + *data_offset);
-		*(data_offset)++;
+		(*data_offset)++;
 
 		if(byte == 0x00)
 		{
