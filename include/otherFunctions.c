@@ -25,50 +25,50 @@
 volatile sig_atomic_t exit_flag = 0;
 char error_message[ERROR_MESSAGE_SIZE];
 
-int sendString(int sockfd, const unsigned char *buffer, int bytesToSend)
+int sendString(int sockfd, const unsigned char *buffer, int bytes_to_send)
 {
-	int sentBytes;
+	int sent_bytes;
 
-	while(bytesToSend > 0)
+	while(bytes_to_send > 0)
 	{
-		sentBytes = send(sockfd, buffer, bytesToSend, 0);
+		sent_bytes = send(sockfd, buffer, bytes_to_send, 0);
 
 		// return 0 on error
-		if(sentBytes == -1)
+		if(sent_bytes == -1)
 			return 0;
 
-		bytesToSend -= sentBytes;
-		buffer += sentBytes;
+		bytes_to_send -= sent_bytes;
+		buffer += sent_bytes;
 	}
 
 	return 1;
 }
 
-int recvLine(int sockfd, unsigned char *destBuffer)
+int recvLine(int sockfd, unsigned char *destination_buffer)
 {
 #define EOL "\r\n"
 #define EOL_SIZE 2
 
 	unsigned char *ptr;
-	int eolMatched = 0;
+	int eol_matched = 0;
 
-	ptr = destBuffer;
+	ptr = destination_buffer;
 
 	while(recv(sockfd, ptr, 1, 0) == 1)
 	{
-		if(*ptr == EOL[eolMatched])
+		if(*ptr == EOL[eol_matched])
 		{
-			eolMatched++;
+			eol_matched++;
 
-			if(eolMatched == EOL_SIZE)
+			if(eol_matched == EOL_SIZE)
 			{
 				*(ptr - EOL_SIZE + 1) = '\0';
-				return strlen((char *)destBuffer);
+				return strlen((char *)destination_buffer);
 			}
 		}
 
 		else
-			eolMatched = 0;
+			eol_matched = 0;
 
 		ptr++;
 	}
@@ -77,108 +77,108 @@ int recvLine(int sockfd, unsigned char *destBuffer)
 	return 0;
 }
 
-void dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr)
+void dump(const unsigned char *data_buffer, const unsigned int length, FILE *output_file_ptr)
 {
-	unsigned int printLocation = 0;
+	unsigned int print_location = 0;
 	char byte;
 
-	while(printLocation < length)
+	while(print_location < length)
 	{
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i < length)
-				fprintf(outputFilePtr, "%02x ", dataBuffer[printLocation + i]);
+			if(print_location + i < length)
+				fprintf(output_file_ptr, "%02x ", data_buffer[print_location + i]);
 
 			else
-				fprintf(outputFilePtr, "   ");
+				fprintf(output_file_ptr, "   ");
 		}
 
-		fprintf(outputFilePtr, " | ");
+		fprintf(output_file_ptr, " | ");
 
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i < length)
+			if(print_location + i < length)
 			{
-				byte = dataBuffer[printLocation + i];
+				byte = data_buffer[print_location + i];
 
 				if(byte > 31 && byte < 127)
-					fprintf(outputFilePtr, "%c ", byte);
+					fprintf(output_file_ptr, "%c ", byte);
 
 				else
-					fprintf(outputFilePtr, ", ");
+					fprintf(output_file_ptr, ", ");
 			}
 
 			else
 			{
-				fprintf(outputFilePtr, "\n");
+				fprintf(output_file_ptr, "\n");
 				break;
 			}
 		}
 
-		fprintf(outputFilePtr, "\n");
-		printLocation += 16;
+		fprintf(output_file_ptr, "\n");
+		print_location += 16;
 	}
 }
 
-void pretty_dump(const unsigned char *dataBuffer, const unsigned int length, FILE *outputFilePtr,
-				 const char *prefix, const char *postfix)
+void formattedDump(const unsigned char *data_buffer, const unsigned int length,
+				   FILE *output_file_ptr, const char *prefix, const char *postfix)
 {
-	unsigned int printLocation = 0;
+	unsigned int print_location = 0;
 	char byte;
 
-	while(printLocation < length)
+	while(print_location < length)
 	{
-		fprintf(outputFilePtr, "%s", prefix);
+		fprintf(output_file_ptr, "%s", prefix);
 
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i < length)
-				fprintf(outputFilePtr, "%02x ", dataBuffer[printLocation + i]);
+			if(print_location + i < length)
+				fprintf(output_file_ptr, "%02x ", data_buffer[print_location + i]);
 
 			else
-				fprintf(outputFilePtr, "   ");
+				fprintf(output_file_ptr, "   ");
 		}
 
-		fprintf(outputFilePtr, " | ");
+		fprintf(output_file_ptr, " | ");
 
 		for(int i = 0; i < 16; i++)
 		{
-			if(printLocation + i < length)
+			if(print_location + i < length)
 			{
-				byte = dataBuffer[printLocation + i];
+				byte = data_buffer[print_location + i];
 
 				if(byte > 31 && byte < 127)
-					fprintf(outputFilePtr, "%c ", byte);
+					fprintf(output_file_ptr, "%c ", byte);
 
 				else
-					fprintf(outputFilePtr, ", ");
+					fprintf(output_file_ptr, ", ");
 			}
 
 			else
-				fprintf(outputFilePtr, "   ");
+				fprintf(output_file_ptr, "   ");
 		}
 
-		fprintf(outputFilePtr, "%s", postfix);
-		fprintf(outputFilePtr, "\n");
-		printLocation += 16;
+		fprintf(output_file_ptr, "%s", postfix);
+		fprintf(output_file_ptr, "\n");
+		print_location += 16;
 	}
 }
 
-void hex_stream_dump(const unsigned char *databuffer, const unsigned int length,
-					 FILE *outputFilePtr)
+void hexStreamDump(const unsigned char *data_buffer, const unsigned int length,
+				   FILE *output_file_ptr)
 {
-	unsigned int printLocation = 0;
+	unsigned int print_location = 0;
 
-	while(printLocation < length)
+	while(print_location < length)
 	{
-		fprintf(outputFilePtr, "%02x ", databuffer[printLocation]);
-		printLocation++;
+		fprintf(output_file_ptr, "%02x ", data_buffer[print_location]);
+		print_location++;
 	}
 
-	fprintf(outputFilePtr, "\n");
+	fprintf(output_file_ptr, "\n");
 }
 
-void free_all_pointers(struct allocated_pointers *head)
+void freeAllPointers(struct allocated_pointers *head)
 {
 	struct allocated_pointers *next = NULL;
 	struct allocated_pointers *prev = NULL;
@@ -196,15 +196,15 @@ void free_all_pointers(struct allocated_pointers *head)
 	free(prev);
 }
 
-void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers **tail,
-					 void *new_pointer)
+void addNewPointer(struct allocated_pointers *head, struct allocated_pointers **tail,
+				   void *new_pointer)
 {
 	struct allocated_pointers *new_node =
 		(struct allocated_pointers *)malloc(sizeof(struct allocated_pointers));
 
 	if(new_node == NULL)
 	{
-		free_all_pointers(head);
+		freeAllPointers(head);
 		fatal("allocating memory for a new node", "add_new_pointer", NULL);
 	}
 
@@ -231,8 +231,8 @@ void add_new_pointer(struct allocated_pointers *head, struct allocated_pointers 
 		*tail = new_node;
 }
 
-void remove_from_list(struct allocated_pointers **head, struct allocated_pointers **tail,
-					  void *remove_this)
+void removeFromList(struct allocated_pointers **head, struct allocated_pointers **tail,
+					void *remove_this)
 {
 	struct allocated_pointers *current;
 	struct allocated_pointers *previous;
@@ -269,7 +269,7 @@ void remove_from_list(struct allocated_pointers **head, struct allocated_pointer
 	return;
 }
 
-void remove_all_from_list(struct allocated_pointers *head)
+void removeAllFromList(struct allocated_pointers *head)
 {
 	struct allocated_pointers *current;
 	struct allocated_pointers *previous;
@@ -290,7 +290,7 @@ void remove_all_from_list(struct allocated_pointers *head)
 	}
 }
 
-void fatal(const char *message, const char *location, FILE *outputFilePtr)
+void fatal(const char *message, const char *location, FILE *output_file_ptr)
 {
 	char error_message[ERROR_MESSAGE_SIZE];
 	int lengthLeft = ERROR_MESSAGE_SIZE;
@@ -304,20 +304,20 @@ void fatal(const char *message, const char *location, FILE *outputFilePtr)
 	strncat(error_message, location, lengthLeft);
 	lengthLeft -= strlen(location);
 
-	if(outputFilePtr != NULL)
-		fprintf(outputFilePtr, "%s\nerrno: %d", error_message, errno);
+	if(output_file_ptr != NULL)
+		fprintf(output_file_ptr, "%s\nerrno: %d", error_message, errno);
 
 	exit(-1);
 }
 
-void bulk_print(const struct FILE_POINTERS files, int argCount, ...)
+void bulkPrint(const struct file_pointers files, int arg_count, ...)
 {
 #define MAX_STRING_LENGTH 30
 	va_list args;
-	va_start(args, argCount);
+	va_start(args, arg_count);
 	char string[MAX_STRING_LENGTH];
 
-	for(int j = 0; j < argCount; j++)
+	for(int j = 0; j < arg_count; j++)
 	{
 		strcpy(string, va_arg(args, char *));
 
@@ -337,24 +337,24 @@ void itoa(const int number, char *destination)
 		return;
 	}
 
-	int digitCount = floor(log(number) / log(10)) + 1;
+	int digit_count = floor(log(number) / log(10)) + 1;
 
-	for(int i = 0; i < digitCount; i++)
-		destination[i] = (number / ((int)pow(10, digitCount - 1 - i)) % 10) + '0';
+	for(int i = 0; i < digit_count; i++)
+		destination[i] = (number / ((int)pow(10, digit_count - 1 - i)) % 10) + '0';
 
-	destination[digitCount] = '\0';
+	destination[digit_count] = '\0';
 }
 
-int hex_stream_to_bytes(char *fileName, unsigned char **packet)
+int hexStreamToBytes(char *file_name, unsigned char **packet)
 {
-	FILE *inputFilePtr = fopen(fileName, "r");
+	FILE *input_file_ptr = fopen(file_name, "r");
 
-	if(inputFilePtr == NULL)
+	if(input_file_ptr == NULL)
 		fatal("converting hex stream to bytes", "hex_stream_to_bytes", NULL);
 
 	char hex_stream[HEX_STREAM_LENGTH];
-	int stream_length = fread(hex_stream, 1, HEX_STREAM_LENGTH, inputFilePtr);
-	fclose(inputFilePtr);
+	int stream_length = fread(hex_stream, 1, HEX_STREAM_LENGTH, input_file_ptr);
+	fclose(input_file_ptr);
 
 	hex_stream[stream_length - 1] = '\0';
 	stream_length--;
@@ -381,27 +381,27 @@ int hex_stream_to_bytes(char *fileName, unsigned char **packet)
 	return stream_length / 2;
 }
 
-pthread_mutex_t *setupMutexes(int mutexCount)
+pthread_mutex_t *setupMutexes(int mutex_count)
 {
 	char functionName[] = "setupMutexes";
-	pthread_mutex_t *mutexList = NULL;
-	mutexList = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * mutexCount);
+	pthread_mutex_t *mutex_list = NULL;
+	mutex_list = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t) * mutex_count);
 
-	if(mutexList == NULL)
+	if(mutex_list == NULL)
 		fatal("creating mutexes", functionName, stdout);
 
-	for(int i = 0; i < mutexCount; i++)
+	for(int i = 0; i < mutex_count; i++)
 	{
-		if(pthread_mutex_init(&mutexList[i], NULL) != 0)
+		if(pthread_mutex_init(&mutex_list[i], NULL) != 0)
 			fatal("initializing mutexes", functionName, stdout);
 	}
 
-	return mutexList;
+	return mutex_list;
 }
 
-void cleanMutexes(pthread_mutex_t *mutexes, int mutexCount)
+void cleanMutexes(pthread_mutex_t *mutexes, int mutex_count)
 {
-	for(int i = 0; i < mutexCount; i++)
+	for(int i = 0; i < mutex_count; i++)
 	{
 		if(pthread_mutex_destroy(&mutexes[i]) != 0)
 			fatal("destroying mutexes", "cleanMutexes", stdout);
@@ -410,17 +410,17 @@ void cleanMutexes(pthread_mutex_t *mutexes, int mutexCount)
 	free(mutexes);
 }
 
-void gzipCompress(const char *inputFileName)
+void gzipCompress(const char *input_file_name)
 {
 #define CHUNK 16384
-	FILE *source = fopen(inputFileName, "rb");
+	FILE *source = fopen(input_file_name, "rb");
 	if(source == NULL)
 		fatal("opening source file", "gzipCompress", stdout);
 
-	char outputFileName[100];
-	strcpy(outputFileName, inputFileName);
-	strcat(outputFileName, ".gz");
-	gzFile destination = gzopen(outputFileName, "wb");
+	char output_file_name[100];
+	strcpy(output_file_name, input_file_name);
+	strcat(output_file_name, ".gz");
+	gzFile destination = gzopen(output_file_name, "wb");
 	if(destination == NULL)
 		fatal("opening destination file", "gzipCompress", stdout);
 
@@ -436,13 +436,13 @@ void gzipCompress(const char *inputFileName)
 	gzclose(destination);
 }
 
-bool isNumber(const char *stringToCheck)
+bool isNumber(const char *string_to_check)
 {
-	int stringLength = strlen(stringToCheck);
+	int string_length = strlen(string_to_check);
 
-	for(int i = 0; i < stringLength; i++)
+	for(int i = 0; i < string_length; i++)
 	{
-		if(stringToCheck[i] >= 48 && stringToCheck[i] <= 57)
+		if(string_to_check[i] >= 48 && string_to_check[i] <= 57)
 			continue;
 
 		else

@@ -180,10 +180,17 @@
 	- each line does not exceed 100 characters
 	- all functions return 0 on success and -1 on error
 	- functions now do not use *fatal* to exit. All errors will be handled at an appropriate higher level function	
+	- functions should be about 80 lines long. This change should be made to all functions as long as it doesn't hurt readability
+
 - file */include/ethernet.h* has been formatted
+
 - file */include/ip.h* has been formatted
+
 - file */include/tcp.h* has been formatted
+
 - file */include/udp.h* has been formatted
+
+- file */include/otherFunctions.h* has been formatted
 
 ## cleanups:
 
@@ -191,63 +198,145 @@
 
 ### /include/dns.h
 - f: *fillQuerySection*
+
 - f: *fillAdditionalSection*
+
 - f: *parseOptRecord*
+
 - f: *parseNormalRecord*
 
 ### /include/packetFunctions.h
 - f: *getLinkLayerHeader*
+
 - f: *getNetworkLayerHeader*
+
 - f: *getTransportLayerHeader*
 
 ## rename:
 
 ### /include/dns.h
 - v: *head => pointers_head*
+
 - f: *get_dns_query => getDnsQuery*
 	- v: *dns_query_pointer => query_location_pp*
 	- v: *header_start => payload_start*
+
 - f: *get_dns_response => getDnsResponse*
 	- v: *dns_response_pointer => response_location_pp*
+
 - f: *get_domain_name => getDomainName*
+
 - f: *print_dns_query => printDnsQuery*
 	- v: *outputFilePtr => output_file_ptr*
 	
 ### /include/ethernet.h
 - f: *get_ethernet_header => getEthernetHeader*
+
 - f: *print_ethernet_header => printEthernetHeader*
 
 ### /include/ip.h
 - f: *get_ip_header => getIPHeader*
+
 - f: *print_ip_header => printIPHeader*
 
 ### /include/tcp.h
 - f: *tcp_checksum_matches => tcpChecksumMatches*
+
 - f: *get_tcp_header => getTCPHeader*
 	- v: *header_start => packet_start*
+
 - f: *print_tcp_header => printTCPHeader*
 
 ### /include/udp.h
 - f: *udp_checksum_matches => udpChecksumMatches*
+
 - f: *get_udp_header => getUDPHeader*
 	- v: *header_start => packet_start*
+
 - f: *print_udp_header => printUDPHeader*
 
 ### /include/packetFunctions.h
 - v: *outputFilePtr => output_file_ptr*
+
 - v: *rawOutputFilePtr => raw_output_file_ptr*
+
 - f: *analyze_caught_packets => saveCaughtPackets*
 	- v: *head => pointers_head*
 	- v: *tail => pointers_tail*
 	- v: *saved_packet => structured_packet*
+
 - f: *save_remaining_bytes => saveRemainingBytes*
+
 - f: *print_packet => printPacket*
 	- v: *packet => structured_packet*
+
 - s: *packet_structure*
 	- v: *ethernet_header => link_layer_header*
 	- v: *network_layer_structure => network_layer_header*
 	- v: *transport_layer_structure => transport_layer_header*
 	- v: *application_layer_structure => application_layer_header*
+	
+### /include/otherFunctions.h
+- f: *pretty_dump => formattedDump*
+	+ v: *dataBuffer => data_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	+ v: *printLocation => print_location*
+
+- f: *hex_stream_dump => hexStreamDump*
+	+ v: *databuffer => data_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	+ v: *printLocation => print_location*
+
+- f: *free_all_pointers => freeAllPointers*
+
+- f: *add_new_pointer => addNewPointer*
+
+- f: *remove_from_list => removeFromList*
+
+- f: *remove_all_from_list => removeAllFromList*
+
+- f: *bulk_print => bulkPrint*
+	+ v: *argCount => arg_count*
+
+- f: *hex_stream_to_bytes => hexStreamToBytes*
+	+ v: *fileName => file_name*
+	+ v: *inputFilePtr => input_file_ptr*
+
+- s: *FILE_POINTERS => file_pointers*
+
+- f: *sendString*
+	+ v: *bytesToSend => bytes_to_send*
+	+ v: *sentBytes => sent_bytes*
+- f: *recvLine*
+	+ v: *destBuffer => destination_buffer*
+	+ v: *eolMatched => eol_matched*
+- f: *dump*
+	+ v: *dataBuffer => data_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	+ v: *printLocation => print_location*
+
+- f: *fatal*
+	+ v: *outputFilePtr => output_file_ptr*
+
+- f: *gzipCompress*
+	+ v: *inputFileName => input_file_name*
+	+ v: *outputFileName => output_file_name*
+
+- f: *isNumber*
+	+ v: *stringToCheck => string_to_check*
+
+- f: *setupMutexes*
+	+ v: *mutexCount => mutex_count*
+	+ v: *mutexList => mutex_list*
+
+- f: *cleanMutexes*
+	+ v: *mutexCount => mutex_count*
+	
+- f: *itoa*
+	+ v: *digitCount => digit_count*
+	
+- f: *isNumber*
+	+ v: *stringLength => string_length*
 
 ### /Packet Sniffer/packetSniffer.c
 - f: *main*

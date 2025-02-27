@@ -157,7 +157,7 @@ int printPacket(const struct packet_structure *structured_packet, FILE *output_f
 	if(structured_packet->remaining_length != 0)
 	{
 		fprintf(output_file_ptr, "printing remaining bytes\n");
-		hex_stream_dump(structured_packet->remaining_bytes, structured_packet->remaining_length,
+		hexStreamDump(structured_packet->remaining_bytes, structured_packet->remaining_length,
 			 output_file_ptr);
 	}
 

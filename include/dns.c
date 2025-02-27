@@ -36,13 +36,13 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	*query_location_pp = (struct dns_query *)malloc(sizeof(struct dns_query));
 	if(*query_location_pp == NULL)
 	{
-		free_all_pointers(pointers_head);
+		freeAllPointers(pointers_head);
 		perror(function_name);
 		strcpy(error_message, "allocating memory");
 		fatal(error_message, NULL, stdout);
 	}
 	else
-		add_new_pointer(pointers_head, NULL, *query_location_pp);
+		addNewPointer(pointers_head, NULL, *query_location_pp);
 
 	(*query_location_pp)->dns_queries_list = NULL;
 	(*query_location_pp)->dns_additional_list = NULL;
@@ -58,7 +58,7 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 	query_header.dns_additional_count = ntohs(query_header.dns_additional_count);
 	if((query_header.dns_flags & DNS_QR) != 0 || (query_header.dns_flags & DNS_ZERO) != 0 || query_header.dns_answer_count != 0 || query_header.dns_authority_count != 0)
 	{
-		free_all_pointers(pointers_head);
+		freeAllPointers(pointers_head);
 		return 0;
 	}
 	(*query_location_pp)->dns_header = query_header;
@@ -71,14 +71,14 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 							  &((*query_location_pp)->dns_queries_list), pointers_head);
 	if(status != 0)
 	{
-		free_all_pointers(pointers_head);
+		freeAllPointers(pointers_head);
 		return 0;
 	}
 
 	int additional_count = query_header.dns_additional_count;
 	if(additional_count == 0)
 	{
-		remove_all_from_list(pointers_head);
+		removeAllFromList(pointers_head);
 		return true;
 	}
 
@@ -86,11 +86,11 @@ int getDnsQuery(const unsigned char *payload_start, struct dns_query **query_loc
 								   &((*query_location_pp)->dns_additional_list), pointers_head);
 	if(status != 0)
 	{
-		free_all_pointers(pointers_head);
+		freeAllPointers(pointers_head);
 		return -1;
 	}
 
-	remove_all_from_list(pointers_head);
+	removeAllFromList(pointers_head);
 	return true;
 }
 
@@ -110,7 +110,7 @@ int fillQuerySection(const unsigned char *query_start, int *data_offset, int que
 	}
 
 	else
-		add_new_pointer(pointers_head, NULL, queries);
+		addNewPointer(pointers_head, NULL, queries);
 
 	char **domain_names = NULL;
 	domain_names = (char **)malloc(sizeof(char *) * query_count);
@@ -140,7 +140,7 @@ int fillQuerySection(const unsigned char *query_start, int *data_offset, int que
 			return -1;
 		}
 		else
-			add_new_pointer(pointers_head, NULL, domain_names[i]);
+			addNewPointer(pointers_head, NULL, domain_names[i]);
 
 		short word;
 		// get other information
@@ -176,7 +176,7 @@ int fillAdditionalSection(const unsigned char *additional_start, int *data_offse
 		return -1;
 	}
 	else
-		add_new_pointer(pointers_head, NULL, additional_records);
+		addNewPointer(pointers_head, NULL, additional_records);
 
 	// add additional section
 	for(int i = 0; i < additional_count; i++)
@@ -375,7 +375,7 @@ void printDnsQuery(struct dns_query *dns_query_packet, FILE *output_file_ptr)
 			fprintf(output_file_ptr, "\t\t\t\t[  Data Length: %hu  ]\n",
 					((struct dns_opt_record *)&response)->dns_data_length);
 			fprintf(output_file_ptr, "\t\t\t\t[  Option Data:  ]\n");
-			pretty_dump(((struct dns_opt_record *)&response)->dns_option_data,
+			formattedDump(((struct dns_opt_record *)&response)->dns_option_data,
 						((struct dns_opt_record *)&response)->dns_data_length, output_file_ptr,
 						"\t\t\t\t[  ", "  ]");
 		}
@@ -394,7 +394,7 @@ void printDnsQuery(struct dns_query *dns_query_packet, FILE *output_file_ptr)
 			fprintf(output_file_ptr, "\t\t\t\t[  TTL: %d  ]\n", response.dns_TTL);
 			fprintf(output_file_ptr, "\t\t\t\t[  Data Length: %hu  ]\n", response.dns_data_length);
 			fprintf(output_file_ptr, "\t\t\t\t[  Resource Data:  ]\n");
-			pretty_dump(response.dns_resource_data, response.dns_data_length, output_file_ptr,
+			formattedDump(response.dns_resource_data, response.dns_data_length, output_file_ptr,
 						"\t\t\t\t[  ", "  ]");
 		}
 	}
@@ -452,7 +452,7 @@ int parseOptRecord(const unsigned char *additional_start, int *data_offset,
 		}
 
 		else
-			add_new_pointer(pointers_head, NULL, resource_data);
+			addNewPointer(pointers_head, NULL, resource_data);
 
 		memcpy(resource_data, additional_start + *data_offset, dataLength);
 		*data_offset += dataLength;
@@ -488,7 +488,7 @@ int parseNormalRecord(const unsigned char *additional_start, int *data_offset,
 	}
 
 	else
-		add_new_pointer(pointers_head, NULL, additional_record.dns_domain_name);
+		addNewPointer(pointers_head, NULL, additional_record.dns_domain_name);
 
 	additional_record.dns_type = ntohs(*(unsigned short *)(additional_start + *data_offset));
 	*data_offset += 2;
@@ -511,7 +511,7 @@ int parseNormalRecord(const unsigned char *additional_start, int *data_offset,
 			return -1;
 		}
 		else
-			add_new_pointer(pointers_head, NULL, resource_data);
+			addNewPointer(pointers_head, NULL, resource_data);
 
 		memcpy(resource_data, additional_start + *data_offset, dataLength);
 		*data_offset += dataLength;
