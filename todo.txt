@@ -41,7 +41,6 @@
 - setupResponse function should have options to change default responses in at least the following headers:
 	- Content-Encoding
 - sendResponse function currently defaults to compressing file before sending
-- change naming style to a consistent one, all CamelCase or _
 - add support for DNS over TCP
 - create RB-tree to contain open resources
 - *dns.h* function *printDnsQuery* and *freeDnsQuery* have to be modified. *freeDnsQuery* must properly free the whole query.
@@ -50,3 +49,8 @@
 - Change README.md to reflect new changes
 - Change the license header in each file
 - create a manual for each function
+- httpHandling.c has not been formatted in the following areas:
+	- function length
+	- error handling
+
+## *clean todo.txt so that it is more clear on what has to be done now, what has to be done constantly and where it all has to be done*

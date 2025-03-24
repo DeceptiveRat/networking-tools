@@ -192,6 +192,8 @@
 
 - file */include/otherFunctions.h* has been formatted
 
+- file */include/httpHandling.h* has been formatted to use correct variable and function names. However, the function length and error handling logic has not been changed yet.
+
 ## cleanups:
 
 ## new:
@@ -337,6 +339,114 @@
 	
 - f: *isNumber*
 	+ v: *stringLength => string_length*
+	
+### /include/httpHandling.h
+- global:
+	+ v: *functionName => function_name*
+
+- s: *threadParameters => thread_parameters*
+	+ v: *connectionID => connection_ID*
+	+ v: *connectedTo => connected_to*
+	+ v: *shutDown => shutdown*
+	+ v: *writeBufferSize => write_buffer_size*
+	+ v: *readBufferSize => read_buffer_size*
+	+ v: *writeBuffer => write_buffer*
+	+ v: *readBuffer => read_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	+ v: *debugFilePtr => debug_file_ptr*
+	+ v: *mutex_writeBufferSize => mutex_write_buffer*
+	+ v: *mutex_readBufferSize => mutex_read_buffer*
+	
+- s: *listeningThreadParameters => listening_thread_parameters*
+	+ v: *listeningSocket => listening_socket*
+	+ v: *acceptedSocket => accepted_socket*
+	+ v: *acceptedSocketPending => accepted_socket_pending*
+	+ v: *shutDown => shutdown*
+	+ v: *mutex_acceptedSocket => mutex_accepted_socket*
+	
+- s: *connectionResources => connection_resources*
+	+ v: *clientSocket => client_socket*
+	+ v: *serverSocket => server_socket*
+	+ v: *shutDown => shutdown*
+	+ v: *dataFromClientSize => data_from_client_size*
+	+ v: *dataFromServerSize => data_from_server_size*
+	+ v: *dataFromClient => data_from_client*
+	+ v: *dataFromServer => data_from_server*
+	+ v: *mutex_dataFromClientSize => mutex_data_from_client*
+	+ v: *mutex_dataFromServerSize => mutex_data_from_server*
+	+ v: *serverThread => server_thread*
+	+ v: *clientThread => client_thread*
+	+ v: *serverArgs => server_arguments*
+	+ v: *clientArgs => client_arguments*
+	+ v: *outputFilePtr => output_file_ptr*
+	
+- s: *whitelistStructure => whitelist_structure*
+	+ v: *IPAddresses => IP_addresses*
+	+ v: *IPAddressCount => IP_address_count*
+	+ v: *portCount => port_count*
+	+ v: *hostnameCount => hostname_count*
+	
+- s: *header*
+	+ v: *headerName => header_name*
+	+ v: *headerData => header_data*
+	
+- s: *HTTPResponse => HTTP_response*
+	+ v: *responseVersion => response_version*
+	+ v: *statusCode => status_code*
+	
+- f: *setupConnectionResources*
+	+ v: *connectionCount => connection_count*
+	+ v: *globalOutputFilePtr => global_output_file_ptr*
+	+ v: *fileName => file_name*
+	+ v: *filepath => file_path*
+	+ v: *connectionNumber => connection_number*
+	
+- f: *setupWhitelist*
+	+ v: *whitelistFile => whitelist_file*
+	+ v: *stringRead => string_read*
+	
+- f: *sendResponse*
+	+ v: *fileType => file_type*
+	+ v: *writeBuffer => write_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	
+- f: *returnSocketToClient*
+	+ v: *listeningSocket => listening_socket*
+	
+- f: *returnSocketToServer*
+	+ v: *destinationAddressInformation => destination_address_information*
+	
+- f: *getDestinationName*
+	+ v: *receivedData => received_data*
+	+ v: *destinationNameBuffer => destination_name_buffer*
+	+ v: *outputFilePtr => output_file_ptr*
+	
+- f: *getDestinationPort*
+	+ v: *destinationNameEnd => destination_name_end*
+	+ v: *destinationPortBuffer => destination_port_buffer*
+	+ v: *isHTTPS => is_HTTPS*
+	+ v: *outputFilePtr => output_file_ptr*
+	
+- f: *returnDestinationAddressInfo*
+	+ v: *destinationName => destination_name*
+	+ v: *destinationPort => destination_port*
+	+ v: *outputFilePtr => output_file_ptr*
+	
+- f: *getHTTPRequestType*
+	+ v: *receivedData => received_data*
+	
+- f: *getRequestedObject*
+	+ v: *requestMessage => requested_message*
+	+ v: *requestedObject => requested_object*
+	
+- f: *isWhitelisted*
+	+ v: *destinationName => destination_name*
+	+ v: *destinationPort => destination_port*
+	+ v: *addressInfo => address_info*
+	
+- f: *cleanupConnections*
+	+ v: *conRes => connection_resource*
+	+ v: *connectionCount => connection_count*
 
 ### /Packet Sniffer/packetSniffer.c
 - f: *main*
@@ -393,3 +503,6 @@
 	
 - s: *packet_structure*
 	- *link_layer_header* type _struct ether_hdr*_ => void*
+
+### /include/httpHandling.h
+- all *function_name* type is const char

@@ -120,7 +120,7 @@ struct HTTP_response
 void setDomainNames();
 void setupConnectionResources(struct connection_resources* connections, int connection_count, FILE* global_output_file_ptr);
 void setupWhitelist(struct whitelist_structure* whitelist);
-void setupResponse(struct HTTPResponse** destination, int options);
+void setupResponse(struct HTTP_response** destination, int options);
 
 // action function
 void handleHTTPConnection();
@@ -139,7 +139,7 @@ int getHTTPRequestType(const char* received_data);
 void getRequestedObject(const unsigned char *request_message, char *requested_object);
 
 // verifying functions
-bool isWhitelisted(const struct whitelistStructure whitelist, const char* destination_name, const char* destination_port, const struct addrinfo address_info);
+bool isWhitelisted(const struct whitelist_structure whitelist, const char* destination_name, const char* destination_port, const struct addrinfo address_info);
 
 // thread functions
 void* whitelistedThreadFunction(void* args);
