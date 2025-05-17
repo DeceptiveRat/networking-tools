@@ -258,7 +258,7 @@ none
 
 ## 18. sendResponse
 ### Synopsis
-_int sendResponse(int socket, const int options, const char *file_type, char *write_buffer, const struct HTTP_response *response, FILE *output_file_ptr);_
+_int sendResponse(int socket, const int options, const char *file_type, char *write_buffer, const struct HTTP_response *response, FILE *output_file_ptr, SSL* ssl);_
 
 ### Description
 depending on the *file_type* requested, send appropriate file as a response.
@@ -277,6 +277,8 @@ Other file types are not supported yet.
 ### Options
 - RESPONSE_NO_PAYLOAD, 0x1<br>
 send no payload with the response
+- RESPONSE_HTTPS, 0x2<br>
+send response as HTTPS response using *ssl*
 
 ---
 
@@ -287,7 +289,7 @@ _void *blacklistedThreadFunction(void *args);_
 ### Description
 thread function for connections with non-whitelisted addresses. 
 
-When http GET request messages are received, sends an appropriate response via *sendResponse*
+When http GET request messages are received, sends an appropriate response
 
 Other types of http requests are not supported yet and ignored
 
@@ -336,6 +338,56 @@ options are not implemented yet
 
 ### Options
 not implemented yet
+
+---
+
+## 22. setupListeningFunctions
+### Synopsis
+_void setupListeningFunctions(int *accepted_socket, bool *shutdown_listening_socket, bool *accepted_socket_pending, bool *accepted_socket_HTTPS, pthread_mutex_t *mutex_accepted_socket, struct listening_thread_parameters *httpArgs, struct listening_thread_parameters *httpsArgs);_
+
+### Description
+setup *listening_thread_parameters* for both http and https
+
+### Return Value
+none
+
+---
+
+## 23. receiveData
+### Synopsis
+_int receiveData(int socket, unsigned char* buffer, int buffer_size, int flags);_
+
+### Description
+all arguments are passed to *recv*. If the return value is -1, check if errno is EAGAIN or EWOULDBLOCK
+
+### Return Value
+- -2: recv failed but errno is EAGAIN or EWOULDBLOCK
+- -1: recv failed 
+- 0 or more: return value of recv
+
+---
+
+## 24. parseAndRespond
+### Synopsis
+_int parseAndRespond(const unsigned char* http_data, unsigned char* buffer, int socket, struct HTTP_response *http_response, int connection_id, int packet_count, FILE* output_file_ptr, FILE* debug_file_ptr, int sendResponse_options, SSL *ssl);_
+
+### Description
+parse *http_data*. If it is a GET request, get the requested object. Then call *sendResponse* to send the *http_response*. 
+
+*sendResponse_options* is used to call *sendResponse* and also to check other things.
+
+### Return Value
+- 0: success
+- -1: unknown file type
+- -2: error opening file
+- -3: unsupported file type
+- -4: not an http packet
+
+### Options
+- RESPONSE_NO_PAYLOAD, 0x1<br>
+send no payload with the response
+- RESPONSE_HTTPS, 0x2<br>
+send response as HTTPS response using *ssl*
 
 ---
 
