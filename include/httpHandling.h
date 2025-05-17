@@ -25,7 +25,8 @@
 
 #define NAME_LENGTH 7
 #define BUFFER_SIZE 4096
-#define LISTENING_PORT "8080"
+#define HTTP_LISTENING_PORT "8080"
+#define HTTPS_LISTENING_PORT "8443"
 #define MAX_CONNECTION_COUNT 2
 #define TIMEOUT_COUNT 20000
 #define DOMAIN_NAME_LENGTH 6
@@ -61,8 +62,10 @@ struct listening_thread_parameters
 	int listening_socket;
 	int *accepted_socket;
 	bool *accepted_socket_pending;
+	bool *accepted_socket_HTTPS;
 	bool *shutdown;
-	// encloses both acceptedSocketPending and acceptedSocket
+	bool is_HTTPS;
+	// for both acceptedSocketPending and acceptedSocket
 	pthread_mutex_t *mutex_accepted_socket;
 };
 
@@ -72,6 +75,7 @@ struct connection_resources
 	int client_socket;
 	int server_socket;
 	bool shutdown;
+	bool is_HTTPS;
 
 	// buffer info
 	int data_from_client_size;
@@ -122,6 +126,11 @@ void setupConnectionResources(struct connection_resources *connections, int conn
 							  FILE *global_output_file_ptr);
 void setupWhitelist(struct whitelist_structure *whitelist);
 void setupResponse(struct HTTP_response **destination, int options);
+void setupListeningFunctions(int *accepted_socket, bool *shutdown_listening_socket,
+							 bool *accepted_socket_pending, bool *accepted_socket_HTTPS,
+							 pthread_mutex_t *mutex_accepted_socket,
+							 struct listening_thread_parameters *httpArgs,
+							 struct listening_thread_parameters *httpsArgs);
 
 // action function
 void handleHTTPConnection();
@@ -136,7 +145,9 @@ int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_b
 					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options);
 
 // return sockets
-int returnListeningSocket();
+#define HTTP_LISTENER 0x1
+#define HTTPS_LISTENER 0x2
+int returnListeningSocket(int options);
 int returnSocketToClient(const int listening_socket);
 int returnSocketToServer(const struct addrinfo destination_address_information);
 

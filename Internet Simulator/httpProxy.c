@@ -16,6 +16,7 @@
  */
 
 #include "httpHandling.h"
+#include "httpsHandling.h"
 #include "otherFunctions.h"
 
 int main(void)

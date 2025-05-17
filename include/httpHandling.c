@@ -29,9 +29,11 @@
 #include <unistd.h>
 
 #include "httpHandling.h"
+#include "httpsHandling.h"
 #include "otherFunctions.h"
 
 pthread_mutex_t mutex_outputFile = PTHREAD_MUTEX_INITIALIZER;
+SSL_CTX *default_context;
 
 char domainNames[DOMAIN_NAME_COUNT][DOMAIN_NAME_LENGTH];
 void setDomainNames()
@@ -194,6 +196,37 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 	fclose(whitelist_file);
 }
 
+void setupListeningFunctions(int *accepted_socket, bool *shutdown_listening_socket,
+							 bool *accepted_socket_pending, bool *accepted_socket_HTTPS,
+							 pthread_mutex_t *mutex_accepted_socket,
+							 struct listening_thread_parameters *httpArgs,
+							 struct listening_thread_parameters *httpsArgs)
+{
+	int hostHTTPSocket = returnListeningSocket(HTTP_LISTENER);
+	int hostHTTPSSocket = returnListeningSocket(HTTPS_LISTENER);
+	struct listening_thread_parameters http_listening_thread_args;
+	struct listening_thread_parameters https_listening_thread_args;
+
+	http_listening_thread_args.listening_socket = hostHTTPSocket;
+	http_listening_thread_args.accepted_socket = accepted_socket;
+	http_listening_thread_args.accepted_socket_pending = accepted_socket_pending;
+	http_listening_thread_args.accepted_socket_HTTPS = accepted_socket_HTTPS;
+	http_listening_thread_args.shutdown = shutdown_listening_socket;
+	http_listening_thread_args.mutex_accepted_socket = mutex_accepted_socket;
+	http_listening_thread_args.is_HTTPS = false;
+
+	https_listening_thread_args.listening_socket = hostHTTPSSocket;
+	https_listening_thread_args.accepted_socket = accepted_socket;
+	https_listening_thread_args.accepted_socket_pending = accepted_socket_pending;
+	https_listening_thread_args.accepted_socket_HTTPS = accepted_socket_HTTPS;
+	https_listening_thread_args.shutdown = shutdown_listening_socket;
+	https_listening_thread_args.mutex_accepted_socket = mutex_accepted_socket;
+	https_listening_thread_args.is_HTTPS = true;
+
+	*httpArgs = http_listening_thread_args;
+	*httpsArgs = https_listening_thread_args;
+}
+
 void handleHTTPConnection()
 {
 #define DESTINATION_NAME_LENGTH 100
@@ -228,27 +261,34 @@ void handleHTTPConnection()
 	int connectionCount = 0;
 
 	// initialize variables for listening thread
-	pthread_t listeningThread;
-	int hostSocket = returnListeningSocket();
 	int accepted_socket;
+	bool shutdown_listening_socket;
 	bool accepted_socket_pending;
-	bool shutdownlistening_socket;
+	bool accepted_socket_HTTPS;
 	pthread_mutex_t mutex_accepted_socket = PTHREAD_MUTEX_INITIALIZER;
-	struct listening_thread_parameters listeningThreadArgs;
+	struct listening_thread_parameters http_listening_thread_args;
+	struct listening_thread_parameters https_listening_thread_args;
+	setupListeningFunctions(&accepted_socket, &shutdown_listening_socket, &accepted_socket_pending,
+							&accepted_socket_HTTPS, &mutex_accepted_socket,
+							&http_listening_thread_args, &https_listening_thread_args);
 
-	listeningThreadArgs.listening_socket = hostSocket;
-	listeningThreadArgs.accepted_socket = &accepted_socket;
-	listeningThreadArgs.accepted_socket_pending = &accepted_socket_pending;
-	listeningThreadArgs.shutdown = &shutdownlistening_socket;
-	listeningThreadArgs.mutex_accepted_socket = &mutex_accepted_socket;
+	// initialize https configuration
+	initOpenssl();
+	default_context = createContext();
+	configureContext(default_context, NULL, NULL);
 
 	// create listening thread
-	pthread_create(&listeningThread, NULL, listeningThreadFunction, &listeningThreadArgs);
+	pthread_t httpListeningThread;
+	pthread_t httpsListeningThread;
+	pthread_create(&httpListeningThread, NULL, listeningThreadFunction,
+				   &http_listening_thread_args);
+	pthread_create(&httpsListeningThread, NULL, listeningThreadFunction,
+				   &https_listening_thread_args);
 
-	while(!shutdownlistening_socket)
+	while(!shutdown_listening_socket)
 	{
 		if(connectionCount == MAX_CONNECTION_COUNT)
-			shutdownlistening_socket = true;
+			shutdown_listening_socket = true;
 
 		// there is a new connection pending
 		if(accepted_socket_pending && connectionCount < MAX_CONNECTION_COUNT)
@@ -287,6 +327,7 @@ void handleHTTPConnection()
 					connections[i].shutdown = true;
 
 				//cleanupConnections(connections, connectionCount);
+				cleanupOpenssl();
 				pthread_mutex_destroy(&mutex_outputFile);
 				fclose(output_file_ptr);
 				cleanMutexes(mutexes, MAX_CONNECTION_COUNT * 2);
@@ -317,7 +358,7 @@ void handleHTTPConnection()
 				continue;
 			}
 
-			char destinationPort[DESTINATION_PORT_LENGTH + 1] = LISTENING_PORT;
+			char destinationPort[DESTINATION_PORT_LENGTH + 1] = HTTP_LISTENING_PORT;
 
 			struct addrinfo destinationAddressInformation =
 				returnDestinationAddressInfo(destination_name, destinationPort, output_file_ptr);
@@ -359,6 +400,7 @@ void handleHTTPConnection()
 		pthread_join(connections[i].serverThread, NULL);
 	}
 
+	cleanupOpenssl();
 	//cleanupConnections(connections, connectionCount);
 	fclose(output_file_ptr);
 	cleanMutexes(mutexes, MAX_CONNECTION_COUNT * 2);
@@ -401,18 +443,24 @@ bool isWhitelisted(const struct whitelist_structure whitelist, const char *desti
 }
 
 /* create, bind, and return a listening socket */
-int returnListeningSocket()
+int returnListeningSocket(int options)
 {
 	char function_name[] = "returnlistening_socket";
 	struct addrinfo hostAddrHint, *hostResult;
 	int hostSocket;
+
+	char listening_port[5];
+	if((options & HTTP_LISTENER) != 0)
+		strcpy(listening_port, HTTP_LISTENING_PORT);
+	else if((options & HTTPS_LISTENER) != 0)
+		strcpy(listening_port, HTTPS_LISTENING_PORT);
 
 	memset(&hostAddrHint, 0, sizeof(struct addrinfo));
 	hostAddrHint.ai_family = AF_INET;
 	hostAddrHint.ai_socktype = SOCK_STREAM;
 	hostAddrHint.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(NULL, LISTENING_PORT, &hostAddrHint, &hostResult);
+	getaddrinfo(NULL, listening_port, &hostAddrHint, &hostResult);
 	hostSocket = socket(hostResult->ai_family, hostResult->ai_socktype, hostResult->ai_protocol);
 
 	if(hostSocket == -1)
@@ -707,7 +755,8 @@ int copyBuffer(unsigned char *read_buffer, int read_buffer_size, unsigned char *
 
 int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_buffer_size,
 					   FILE *output_file_ptr, FILE *debug_file_ptr,
-					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options)
+					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to,
+					   int options)
 {
 	if(sendString(socket, read_buffer, *read_buffer_size) == 0)
 	{
@@ -742,12 +791,17 @@ void *listeningThreadFunction(void *args)
 	int listening_socket = parameter.listening_socket;
 	int *accepted_socket = parameter.accepted_socket;
 	bool *accepted_socket_pending = parameter.accepted_socket_pending;
+	bool *accepted_socket_HTTPS = parameter.accepted_socket_HTTPS;
 	bool *shutdown = parameter.shutdown;
+	bool is_HTTPS = parameter.is_HTTPS;
 	pthread_mutex_t *mutex_accepted_socket = parameter.mutex_accepted_socket;
 
 	int temp_accepted_socket = 0;
 
-	printf("[ listener ] Listening on port %s\n", LISTENING_PORT);
+	if(is_HTTPS)
+		printf("[ listener ] Listening on port %s for HTTPS connections\n", HTTPS_LISTENING_PORT);
+	else
+		printf("[ listener ] Listening on port %s for HTTP connections\n", HTTP_LISTENING_PORT);
 
 	while(!(*shutdown))
 	{
@@ -762,14 +816,13 @@ void *listeningThreadFunction(void *args)
 		}
 
 		pthread_mutex_lock(mutex_accepted_socket);
-
-		if(!(*accepted_socket_pending))
+		while(*accepted_socket_pending)
 		{
-			*accepted_socket = temp_accepted_socket;
-			*accepted_socket_pending = true;
-			temp_accepted_socket = 0;
-		}
-
+		};
+		*accepted_socket = temp_accepted_socket;
+		*accepted_socket_pending = true;
+		temp_accepted_socket = 0;
+		*accepted_socket_HTTPS = is_HTTPS;
 		pthread_mutex_unlock(mutex_accepted_socket);
 	}
 
@@ -777,10 +830,10 @@ void *listeningThreadFunction(void *args)
 		close(temp_accepted_socket);
 
 	pthread_mutex_lock(mutex_accepted_socket);
-
-	if(!(*accepted_socket_pending))
-		close(*accepted_socket);
-
+	while(*accepted_socket_pending)
+	{
+	};
+	close(*accepted_socket);
 	pthread_mutex_unlock(mutex_accepted_socket);
 	close(listening_socket);
 	pthread_exit(NULL);

@@ -120,7 +120,7 @@ false: not whitelisted
 
 ## 9. returnListeningSocket
 ### Synopsis
-_int returnListeningSocket();_
+_int returnListeningSocket(int options);_
 
 ### Description
 creates, binds, and returns a listening socket
@@ -130,6 +130,13 @@ listening socket
 
 ### Notes
 errors in this function are fatal errors and will cause the program to terminate
+
+### Options
+- HTTP_LISTENER, 0x1<br>
+create listener for HTTP, on port *HTTP_LISTENING_PORT*
+
+- HTTPS_LISTENER, 0x2<br>
+create listener for HTTPS, on port *HTTPS_LISTENING_PORT*
 
 ---
 
