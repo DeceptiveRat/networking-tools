@@ -16,17 +16,17 @@
  */
 
 #define _GNU_SOURCE
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <errno.h>
+#include <unistd.h>
 
 #include "httpHandling.h"
 #include "otherFunctions.h"
@@ -48,7 +48,8 @@ void setDomainNames()
 	fclose(domainNameFile);
 }
 
-void setupConnectionResources(struct connection_resources* connections, int connection_count, FILE* global_output_file_ptr)
+void setupConnectionResources(struct connection_resources *connections, int connection_count,
+							  FILE *global_output_file_ptr)
 {
 #define OUTPUT_FILE_NAME_LENGTH 40
 #define OUTPUT_FILE_PATH "logs/"
@@ -130,7 +131,7 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 
 	fscanf(whitelist_file, "%s %d\n", string_read, &count);
 	whitelist->IP_address_count = count;
-	whitelist->IP_addresses = (char **)malloc(sizeof(char *)*count);
+	whitelist->IP_addresses = (char **)malloc(sizeof(char *) * count);
 
 	if(whitelist->IP_addresses == NULL)
 		fatal("allocating memory for IP addresses", function_name, stdout);
@@ -140,7 +141,9 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 		int length;
 		fscanf(whitelist_file, "%s\n", string_read);
 		length = strlen(string_read);
-		whitelist->IP_addresses[i] = (char*)malloc(sizeof(char)*length);
+		whitelist->IP_addresses[i] = (char *)malloc(sizeof(char) * length);
+		if(whitelist->IP_addresses[i] == NULL)
+			fatal("allocating memory for IP addresses", function_name, stdout);
 		strcpy(whitelist->IP_addresses[i], string_read);
 	}
 
@@ -148,11 +151,10 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 	fgets(string_read, 100, whitelist_file);
 	if(strcmp(string_read, "Ports\n") != 0)
 		fatal("finding ports start", function_name, stdout);
-	
+
 	fscanf(whitelist_file, "%s %d\n", string_read, &count);
 	whitelist->port_count = count;
-	whitelist->ports = (char **)malloc(sizeof(char *)*count);
-
+	whitelist->ports = (char **)malloc(sizeof(char *) * count);
 	if(whitelist->ports == NULL)
 		fatal("allocating memory for ports", function_name, stdout);
 
@@ -161,7 +163,9 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 		int length;
 		fscanf(whitelist_file, "%s\n", string_read);
 		length = strlen(string_read);
-		whitelist->ports[i] = (char*)malloc(sizeof(char)*length);
+		whitelist->ports[i] = (char *)malloc(sizeof(char) * length);
+		if(whitelist->ports[i] == NULL)
+			fatal("allocating memory for ports", function_name, stdout);
 		strcpy(whitelist->ports[i], string_read);
 	}
 
@@ -169,11 +173,10 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 	fgets(string_read, 100, whitelist_file);
 	if(strcmp(string_read, "Hostnames\n") != 0)
 		fatal("finding hostnames start", function_name, stdout);
-	
+
 	fscanf(whitelist_file, "%s %d\n", string_read, &count);
 	whitelist->hostname_count = count;
-	whitelist->hostnames = (char **)malloc(sizeof(char *)*count);
-
+	whitelist->hostnames = (char **)malloc(sizeof(char *) * count);
 	if(whitelist->hostnames == NULL)
 		fatal("allocating memory for hostnames", function_name, stdout);
 
@@ -182,7 +185,9 @@ void setupWhitelist(struct whitelist_structure *whitelist)
 		int length;
 		fscanf(whitelist_file, "%s\n", string_read);
 		length = strlen(string_read);
-		whitelist->hostnames[i] = (char*)malloc(sizeof(char)*length);
+		whitelist->hostnames[i] = (char *)malloc(sizeof(char) * length);
+		if(whitelist->hostnames[i] == NULL)
+			fatal("allocating memory for hostnames", function_name, stdout);
 		strcpy(whitelist->hostnames[i], string_read);
 	}
 
@@ -198,7 +203,7 @@ void handleHTTPConnection()
 	struct whitelist_structure whitelist;
 	setupWhitelist(&whitelist);
 
-	void* (*threadFunction)(void* args);
+	void *(*threadFunction)(void *args);
 
 	FILE *output_file_ptr = 0;
 	char path[OUTPUT_FILE_NAME_LENGTH];
@@ -268,7 +273,8 @@ void handleHTTPConnection()
 				{
 					pthread_mutex_lock(&mutex_outputFile);
 					printf("[   main   ] lost connection with %d:\n", connectionCount);
-					fprintf(output_file_ptr, "[   main   ] lost connection with %d:\n", connectionCount);
+					fprintf(output_file_ptr, "[   main   ] lost connection with %d:\n",
+							connectionCount);
 					printf("[   main   ] resetting connection...\n");
 					fprintf(output_file_ptr, "[   main   ] resetting connection...\n");
 					pthread_mutex_unlock(&mutex_outputFile);
@@ -288,15 +294,18 @@ void handleHTTPConnection()
 			}
 
 			pthread_mutex_lock(&mutex_outputFile);
-			printf("[   main   ] received %d bytes from client %d\n", receiveLength, connectionCount);
-			fprintf(output_file_ptr, "[   main   ] received %d bytes from client %d\n", receiveLength, connectionCount);
+			printf("[   main   ] received %d bytes from client %d\n", receiveLength,
+				   connectionCount);
+			fprintf(output_file_ptr, "[   main   ] received %d bytes from client %d\n",
+					receiveLength, connectionCount);
 			dump(temp->data_from_client, receiveLength, output_file_ptr);
 			pthread_mutex_unlock(&mutex_outputFile);
 			temp->data_from_client_size = receiveLength;
 
 			// get information about server
 			char destination_name[DESTINATION_NAME_LENGTH + 1];
-			int functionResult = getDestinationName(temp->data_from_client, destination_name, output_file_ptr);
+			int functionResult =
+				getDestinationName(temp->data_from_client, destination_name, output_file_ptr);
 
 			if(functionResult == -1)
 			{
@@ -310,10 +319,12 @@ void handleHTTPConnection()
 
 			char destinationPort[DESTINATION_PORT_LENGTH + 1] = LISTENING_PORT;
 
-			struct addrinfo destinationAddressInformation = returnDestinationAddressInfo(destination_name, destinationPort, output_file_ptr);
+			struct addrinfo destinationAddressInformation =
+				returnDestinationAddressInfo(destination_name, destinationPort, output_file_ptr);
 
 			// not whitelisted
-			if(!isWhitelisted(whitelist, destination_name, destinationPort, destinationAddressInformation))
+			if(!isWhitelisted(whitelist, destination_name, destinationPort,
+							  destinationAddressInformation))
 			{
 				temp->server_socket = 0;
 				threadFunction = &blacklistedThreadFunction;
@@ -332,8 +343,10 @@ void handleHTTPConnection()
 			}
 
 			// create threads
-			pthread_create(&connections[connectionCount].clientThread, NULL, threadFunction, &connections[connectionCount].client_arguments);
-			pthread_create(&connections[connectionCount].serverThread, NULL, threadFunction, &connections[connectionCount].server_arguments);
+			pthread_create(&connections[connectionCount].clientThread, NULL, threadFunction,
+						   &connections[connectionCount].client_arguments);
+			pthread_create(&connections[connectionCount].serverThread, NULL, threadFunction,
+						   &connections[connectionCount].server_arguments);
 
 			connectionCount++;
 		}
@@ -352,30 +365,32 @@ void handleHTTPConnection()
 	pthread_mutex_destroy(&mutex_outputFile);
 }
 
-bool isWhitelisted(const struct whitelist_structure whitelist, const char* destination_name, const char* destinationPort, const struct addrinfo addressInfo)
+bool isWhitelisted(const struct whitelist_structure whitelist, const char *destination_name,
+				   const char *destinationPort, const struct addrinfo addressInfo)
 {
 	char destinationAddressString[INET_ADDRSTRLEN];
 	struct sockaddr_in destinationAddress_in = *(struct sockaddr_in *)addressInfo.ai_addr;
 
-	if(inet_ntop(AF_INET, &destinationAddress_in.sin_addr, destinationAddressString, INET_ADDRSTRLEN) == NULL)
+	if(inet_ntop(AF_INET, &destinationAddress_in.sin_addr, destinationAddressString,
+				 INET_ADDRSTRLEN) == NULL)
 		fatal("converting destination ip address to string", "isWhitelisted", stdout);
 
 	// test for IP address match
-	for(int i = 0;i<whitelist.IP_address_count;i++)
+	for(int i = 0; i < whitelist.IP_address_count; i++)
 	{
 		if(strcmp(destinationAddressString, whitelist.IP_addresses[i]) == 0)
 			return true;
 	}
 
 	// test for hostname match
-	for(int i = 0;i<whitelist.hostname_count;i++)
+	for(int i = 0; i < whitelist.hostname_count; i++)
 	{
 		if(strcmp(destination_name, whitelist.hostnames[i]) == 0)
 			return true;
 	}
 
 	// test for port number match
-	for(int i = 0;i<whitelist.port_count;i++)
+	for(int i = 0; i < whitelist.port_count; i++)
 	{
 		if(strcmp(destinationPort, whitelist.ports[i]) == 0)
 			return true;
@@ -453,7 +468,8 @@ int returnSocketToClient(const int listening_socket)
 
 /* extract the destination name string from the HTTP request */
 /* returns offset of name from start of data, or on error:	-1 when error finding the host string */
-int getDestinationName(const unsigned char *receivedData, char *destination_nameBuffer, FILE *output_file_ptr)
+int getDestinationName(const unsigned char *receivedData, char *destination_nameBuffer,
+					   FILE *output_file_ptr)
 {
 	char *destination_nameStart, *destination_nameEnd;
 	int destination_nameLength;
@@ -492,7 +508,8 @@ int getDestinationName(const unsigned char *receivedData, char *destination_name
 }
 
 /* get additional information about the destination */
-struct addrinfo returnDestinationAddressInfo(const char *destination_name, const char *destinationPort, FILE *output_file_ptr)
+struct addrinfo returnDestinationAddressInfo(const char *destination_name,
+											 const char *destinationPort, FILE *output_file_ptr)
 {
 	char function_name[] = "returnDestinationAddressInfo";
 	struct addrinfo destinationAddressHint, *destinationAddressResult;
@@ -500,13 +517,16 @@ struct addrinfo returnDestinationAddressInfo(const char *destination_name, const
 	destinationAddressHint.ai_family = AF_INET;
 	destinationAddressHint.ai_socktype = SOCK_STREAM;
 
-	if(getaddrinfo(destination_name, destinationPort, &destinationAddressHint, &destinationAddressResult) != 0)
+	if(getaddrinfo(destination_name, destinationPort, &destinationAddressHint,
+				   &destinationAddressResult) != 0)
 		fatal("getting address information for the destination", function_name, stdout);
 
 	char destinationAddressString[INET_ADDRSTRLEN];
-	struct sockaddr_in destinationAddress_in = *(struct sockaddr_in *)destinationAddressResult->ai_addr;
+	struct sockaddr_in destinationAddress_in =
+		*(struct sockaddr_in *)destinationAddressResult->ai_addr;
 
-	if(inet_ntop(AF_INET, &destinationAddress_in.sin_addr, destinationAddressString, INET_ADDRSTRLEN) == NULL)
+	if(inet_ntop(AF_INET, &destinationAddress_in.sin_addr, destinationAddressString,
+				 INET_ADDRSTRLEN) == NULL)
 		fatal("converting destination ip address to string", function_name, stdout);
 
 	pthread_mutex_lock(&mutex_outputFile);
@@ -525,24 +545,18 @@ int returnSocketToServer(const struct addrinfo destinationAddressInformation)
 {
 	char function_name[] = "returnSocketToServer";
 	int socketToDestination;
-	socketToDestination = socket(destinationAddressInformation.ai_family, destinationAddressInformation.ai_socktype, destinationAddressInformation.ai_protocol);
+	socketToDestination =
+		socket(destinationAddressInformation.ai_family, destinationAddressInformation.ai_socktype,
+			   destinationAddressInformation.ai_protocol);
 
 	if(socketToDestination == -1)
 		fatal("creating socket to server", function_name, stdout);
 
-	if(connect(socketToDestination, destinationAddressInformation.ai_addr, destinationAddressInformation.ai_addrlen) == -1)
+	if(connect(socketToDestination, destinationAddressInformation.ai_addr,
+			   destinationAddressInformation.ai_addrlen) == -1)
 		fatal("connecting to server", function_name, stdout);
 
 	return socketToDestination;
-}
-
-bool isConnectMethod(const unsigned char *receivedData)
-{
-	if(strstr((char *)receivedData, "CONNECT ") == NULL)
-		return false;
-
-	else
-		return true;
 }
 
 void *whitelistedThreadFunction(void *args)
@@ -600,8 +614,10 @@ void *whitelistedThreadFunction(void *args)
 			{
 				*shutdown = true;
 				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connected_to, errno);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connected_to, errno);
+				printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connected_to,
+					   errno);
+				fprintf(debug_file_ptr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n",
+						ID, connected_to, errno);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
@@ -621,7 +637,8 @@ void *whitelistedThreadFunction(void *args)
 				*shutdown = true;
 				pthread_mutex_lock(&mutex_outputFile);
 				printf("[%d - %s] Terminating: 0 bytes received\n", ID, connected_to);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: 0 bytes received\n", ID, connected_to);
+				fprintf(debug_file_ptr, "[%d - %s] Terminating: 0 bytes received\n", ID,
+						connected_to);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
@@ -634,7 +651,9 @@ void *whitelistedThreadFunction(void *args)
 			pthread_mutex_unlock(&mutex_outputFile);
 
 			// wait until buffer is empty before writing to it
-			while(*write_buffer_size != 0) {};
+			while(*write_buffer_size != 0)
+			{
+			};
 
 			// write to buffer and change buffer size
 			pthread_mutex_lock(mutex_write_buffer);
@@ -656,7 +675,8 @@ void *whitelistedThreadFunction(void *args)
 				pthread_mutex_lock(&mutex_outputFile);
 				*shutdown = true;
 				printf("[%d - %s] Terminating: error sending data\n", ID, connected_to);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: error sending data\n", ID, connected_to);
+				fprintf(debug_file_ptr, "[%d - %s] Terminating: error sending data\n", ID,
+						connected_to);
 				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
@@ -695,16 +715,16 @@ void *listeningThreadFunction(void *args)
 	bool *shutdown = parameter.shutdown;
 	pthread_mutex_t *mutex_accepted_socket = parameter.mutex_accepted_socket;
 
-	int tempaccepted_socket = 0;
+	int temp_accepted_socket = 0;
 
 	printf("[ listener ] Listening on port %s\n", LISTENING_PORT);
 
 	while(!(*shutdown))
 	{
-		if(tempaccepted_socket == 0)
-			tempaccepted_socket = returnSocketToClient(listening_socket);
+		if(temp_accepted_socket == 0)
+			temp_accepted_socket = returnSocketToClient(listening_socket);
 
-		if(tempaccepted_socket == -2)
+		if(temp_accepted_socket == -2)
 		{
 			printf("[ listener ] error while accepting connection\n");
 			*shutdown = true;
@@ -715,17 +735,16 @@ void *listeningThreadFunction(void *args)
 
 		if(!(*accepted_socket_pending))
 		{
-			*accepted_socket = tempaccepted_socket;
+			*accepted_socket = temp_accepted_socket;
 			*accepted_socket_pending = true;
-			tempaccepted_socket = 0;
+			temp_accepted_socket = 0;
 		}
 
 		pthread_mutex_unlock(mutex_accepted_socket);
-
 	}
 
-	if(tempaccepted_socket != 0)
-		close(tempaccepted_socket);
+	if(temp_accepted_socket != 0)
+		close(temp_accepted_socket);
 
 	pthread_mutex_lock(mutex_accepted_socket);
 
@@ -758,53 +777,61 @@ void cleanupConnections(struct connection_resources *conRes, int connectionCount
 	}
 }
 
-void getRequestedObject(const unsigned char *requestMessage, char *requestedObject)
+void getRequestedObject(const unsigned char *request_message, char *requested_object)
 {
-	char *requestedObjectEnd = strstr((char *)requestMessage, " HTTP/");
+	char *requested_object_end = strstr((char *)request_message, " HTTP/");
 
-	if(requestedObjectEnd == NULL)
+	if(requested_object_end == NULL)
 	{
-		requestedObject[0] = '\0';
+		requested_object[0] = '\0';
 		return;
 	}
 
 	else
 	{
-		int nameLength = requestedObjectEnd - (char *)(requestMessage + 4);
-		if((nameLength == 1) && (*(requestMessage + 4) == '/'))
-			strcpy(requestedObject, "index.html\0");
+		int nameLength = requested_object_end - (char *)(request_message + 4);
+		if((nameLength == 1) && (*(request_message + 4) == '/'))
+			strcpy(requested_object, "index.html\0");
 		else
 		{
-			strncpy(requestedObject, (char *)(requestMessage + 4), nameLength);
-			requestedObject[nameLength] = '\0';
+			strncpy(requested_object, (char *)(request_message + 4), nameLength);
+			requested_object[nameLength] = '\0';
 		}
 		return;
 	}
 }
 
-int sendResponse(int socket, const int options, const char* fileType, char* write_buffer, const struct HTTP_response* response, FILE* output_file_ptr)
+int responseToString(const struct HTTP_response *response, char *buffer)
 {
-#define FILE_READ_BUFFER_SIZE 100
-	memset(write_buffer, 0, 	BUFFER_SIZE);
-	strcat(write_buffer, response->response_version);
-	strcat(write_buffer, " ");
-	strcat(write_buffer, response->status_code);
-	strcat(write_buffer, "\r\n");
-	for(int i = 0;i<RESPONSE_HEADER_COUNT;i++)
+	memset(buffer, 0, BUFFER_SIZE);
+	strcat(buffer, response->response_version);
+	strcat(buffer, " ");
+	strcat(buffer, response->status_code);
+	strcat(buffer, "\r\n");
+	for(int i = 0; i < RESPONSE_HEADER_COUNT; i++)
 	{
 		if(response->headers[i].header_name == NULL)
 			break;
 		else
 		{
-			strcat(write_buffer, response->headers[i].header_name);
-			strcat(write_buffer, ": ");
-			strcat(write_buffer, response->headers[i].header_data);
-			strcat(write_buffer, "\r\n");
+			strcat(buffer, response->headers[i].header_name);
+			strcat(buffer, ": ");
+			strcat(buffer, response->headers[i].header_data);
+			strcat(buffer, "\r\n");
 		}
 	}
-	strcat(write_buffer, "\r\n");
+	strcat(buffer, "\r\n");
+
+	return 0;
+}
+
+int sendResponse(int socket, const int options, const char *fileType, char *write_buffer,
+				 const struct HTTP_response *response, FILE *output_file_ptr)
+{
+#define FILE_READ_BUFFER_SIZE 100
+	responseToString(response, write_buffer);
 	int write_buffer_size = strlen(write_buffer);
-	FILE* inputFile;
+	FILE *inputFile;
 	if((options & RESPONSE_NO_PAYLOAD) == 0)
 	{
 		if(strcmp(fileType, "html") == 0)
@@ -827,13 +854,13 @@ int sendResponse(int socket, const int options, const char* fileType, char* writ
 	}
 
 	fprintf(output_file_ptr, "Send response with size %d:\n", write_buffer_size);
-	dump((unsigned char*)write_buffer, write_buffer_size, output_file_ptr);
+	dump((unsigned char *)write_buffer, write_buffer_size, output_file_ptr);
 	write(socket, write_buffer, write_buffer_size);
 	fclose(inputFile);
 	return 0;
 }
 
-void* blacklistedThreadFunction(void* args)
+void *blacklistedThreadFunction(void *args)
 {
 #define REQUESTED_OBJECT_NAME_LENGTH 30
 #define REQUESTED_OBJECT_TYPE_LENGTH 7
@@ -857,19 +884,18 @@ void* blacklistedThreadFunction(void* args)
 	int requestType = 0;
 	char requestedObject[REQUESTED_OBJECT_NAME_LENGTH];
 	char requestedObjectType[REQUESTED_OBJECT_TYPE_LENGTH];
-	static struct HTTP_response* defaultResponse = NULL;
+	static struct HTTP_response *defaultResponse = NULL;
 	if(defaultResponse == NULL)
 		setupResponse(&defaultResponse, 0);
 	int packetCount = 0;
 
 	while(!(*shutdown))
 	{
-		requestType = getHTTPRequestType((char*)data_from_client);
+		requestType = getHTTPRequestType((char *)data_from_client);
 		if(requestType == 0)
 		{
-			fprintf(stdout, "[%d #%d] Packet not HTTP\n", ID, packetCount);
-			fprintf(debug_file_ptr, "[%d #%d] Packet not HTTP\n", ID, packetCount);
-			*shutdown = true;
+			fprintf(stdout, "[%d #%d] Packet not HTTP. Packet ignored.\n", ID, packetCount);
+			fprintf(debug_file_ptr, "[%d #%d] Packet not HTTP. Packet ignored.\n", ID, packetCount);
 			break;
 		}
 
@@ -878,43 +904,46 @@ void* blacklistedThreadFunction(void* args)
 
 		switch(requestType)
 		{
-		case 1:
-			int result;
-			result = sendResponse(socket, 0, requestedObjectType, (char*)dataToClient, defaultResponse, output_file_ptr);
-			if(result == -1)
-			{
-				fprintf(stdout, "[%d #%d] Unknown file type\n", ID, packetCount);
-				fprintf(debug_file_ptr, "[%d #%d] Unknown file type\n", ID, packetCount);
-				*shutdown = true;
+			case 1:
+				int result;
+				result = sendResponse(socket, 0, requestedObjectType, (char *)dataToClient,
+									  defaultResponse, output_file_ptr);
+				if(result == -1)
+				{
+					fprintf(stdout, "[%d #%d] Unknown file type. Request ignored.\n", ID,
+							packetCount);
+					fprintf(debug_file_ptr, "[%d #%d] Unknown file type. Request ignored.\n", ID,
+							packetCount);
+					break;
+				}
+				else if(result == -2)
+				{
+					fprintf(stdout, "[%d #%d] Error opening file\n", ID, packetCount);
+					fprintf(debug_file_ptr, "[%d #%d] Error opening file\n", ID, packetCount);
+					break;
+				}
+				else
+				{
+					fprintf(stdout, "[%d #%d] Successfully sent response\n", ID, packetCount);
+					fprintf(debug_file_ptr, "[%d #%d] Successfully sent response\n", ID,
+							packetCount);
+					break;
+				}
 				break;
-			}
-			else if(result == -2)
-			{
-				fprintf(stdout, "[%d #%d] Error opening file\n", ID, packetCount);
-				fprintf(debug_file_ptr, "[%d #%d] Error opening file\n", ID, packetCount);
-				*shutdown = true;
+			case 2:
 				break;
-			}
-			else
-			{
-				fprintf(stdout, "[%d #%d] Successfully sent response\n", ID, packetCount);
-				fprintf(debug_file_ptr, "[%d #%d] Successfully sent response\n", ID, packetCount);
-			}
-			break;
-		case 2:
-			break;
-		case 3:
-			break;
-		case 4:
-			break;
-		case 5:
-			break;
-		case 6:
-			break;
-		case 7:
-			break;
-		default:
-			break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				break;
+			case 7:
+				break;
+			default:
+				break;
 		}
 
 		recvResult = recv(socket, data_from_client, BUFFER_SIZE, 0);
@@ -927,7 +956,8 @@ void* blacklistedThreadFunction(void* args)
 		}
 		fprintf(stdout, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
 		fprintf(debug_file_ptr, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
-		fprintf(output_file_ptr, "[%d #%d] Received %zd byte packet\n", ID, packetCount, recvResult);
+		fprintf(output_file_ptr, "[%d #%d] Received %zd byte packet\n", ID, packetCount,
+				recvResult);
 		packetCount++;
 		dump(data_from_client, recvResult, output_file_ptr);
 	}
@@ -942,30 +972,30 @@ void* blacklistedThreadFunction(void* args)
 	pthread_exit(NULL);
 }
 
-int getHTTPRequestType(const char* receivedData)
+int getHTTPRequestType(const char *receivedData)
 {
 	if(receivedData[0] == 'G')
-		return (strncmp(receivedData, "GET", 3)==0)?1:0;
+		return (strncmp(receivedData, "GET", 3) == 0) ? 1 : 0;
 	else if(receivedData[0] == 'P')
 	{
 		if(receivedData[1] == 'O')
-			return (strncmp(receivedData, "POST", 4)==0)?2:0;
+			return (strncmp(receivedData, "POST", 4) == 0) ? 2 : 0;
 		else
-			return (strncmp(receivedData, "PATCH", 5)==0)?5:0;
+			return (strncmp(receivedData, "PATCH", 5) == 0) ? 5 : 0;
 	}
 	else if(receivedData[0] == 'H')
-		return (strncmp(receivedData, "HEAD", 4)==0)?3:0;
+		return (strncmp(receivedData, "HEAD", 4) == 0) ? 3 : 0;
 	else if(receivedData[0] == 'D')
-		return (strncmp(receivedData, "DELETE", 6)==0)?4:0;
+		return (strncmp(receivedData, "DELETE", 6) == 0) ? 4 : 0;
 	else if(receivedData[0] == 'T')
-		return (strncmp(receivedData, "TRACE", 5)==0)?6:0;
+		return (strncmp(receivedData, "TRACE", 5) == 0) ? 6 : 0;
 	else if(receivedData[0] == 'C')
-		return (strncmp(receivedData, "CONNECT", 7)==0)?7:0;
+		return (strncmp(receivedData, "CONNECT", 7) == 0) ? 7 : 0;
 	else
 		return 0;
 }
 
-void setupResponse(struct HTTP_response** destination, int options)
+void setupResponse(struct HTTP_response **destination, int options)
 {
 #define SERVER_HEADER_DEFAULT "nginx/1.18.0 (Ubuntu)\0"
 #define DATE_HEADER_DEFAULT "Wed, 29 Jan 2025 23:45:35 GMT\0"
@@ -977,54 +1007,55 @@ void setupResponse(struct HTTP_response** destination, int options)
 #define XCONTENTTYPEOPTIONS_HEADER_DEFAULT "nosniff\0"
 #define CONTENTENCODING_HEADER_DEFAULT "gzip\0"
 
-	struct HTTP_response* response  = (struct HTTP_response*)malloc(sizeof(struct HTTP_response) + (RESPONSE_HEADER_COUNT*sizeof(struct header)));
+	struct HTTP_response *response = (struct HTTP_response *)malloc(
+		sizeof(struct HTTP_response) + (RESPONSE_HEADER_COUNT * sizeof(struct header)));
 	*destination = response;
 	strcpy(response->response_version, "HTTP/1.1\0");
 	strcpy(response->status_code, "200 OK\0");
 
-	response->headers[0].header_name = (char*)malloc(sizeof("Server\0"));
+	response->headers[0].header_name = (char *)malloc(sizeof("Server\0"));
 	strcpy(response->headers[0].header_name, "Server\0");
-	response->headers[0].header_data = (char*)malloc(sizeof(SERVER_HEADER_DEFAULT));
+	response->headers[0].header_data = (char *)malloc(sizeof(SERVER_HEADER_DEFAULT));
 	strcpy(response->headers[0].header_data, SERVER_HEADER_DEFAULT);
 
-	response->headers[1].header_name = (char*)malloc(sizeof("Date\0"));
+	response->headers[1].header_name = (char *)malloc(sizeof("Date\0"));
 	strcpy(response->headers[1].header_name, "Date\0");
-	response->headers[1].header_data = (char*)malloc(sizeof(DATE_HEADER_DEFAULT));
+	response->headers[1].header_data = (char *)malloc(sizeof(DATE_HEADER_DEFAULT));
 	strcpy(response->headers[1].header_data, DATE_HEADER_DEFAULT);
 
-	response->headers[2].header_name = (char*)malloc(sizeof("Content-Type\0"));
+	response->headers[2].header_name = (char *)malloc(sizeof("Content-Type\0"));
 	strcpy(response->headers[2].header_name, "Content-Type\0");
-	response->headers[2].header_data = (char*)malloc(sizeof(CONTENTTYPE_HEADER_DEFAULT));
+	response->headers[2].header_data = (char *)malloc(sizeof(CONTENTTYPE_HEADER_DEFAULT));
 	strcpy(response->headers[2].header_data, CONTENTTYPE_HEADER_DEFAULT);
 
-	response->headers[3].header_name = (char*)malloc(sizeof("Last-Modified\0"));
+	response->headers[3].header_name = (char *)malloc(sizeof("Last-Modified\0"));
 	strcpy(response->headers[3].header_name, "Last-Modified\0");
-	response->headers[3].header_data = (char*)malloc(sizeof(LASTMODIFIED_HEADER_DEFAULT));
+	response->headers[3].header_data = (char *)malloc(sizeof(LASTMODIFIED_HEADER_DEFAULT));
 	strcpy(response->headers[3].header_data, LASTMODIFIED_HEADER_DEFAULT);
 
-	response->headers[4].header_name = (char*)malloc(sizeof("Connection\0"));
+	response->headers[4].header_name = (char *)malloc(sizeof("Connection\0"));
 	strcpy(response->headers[4].header_name, "Connection\0");
-	response->headers[4].header_data = (char*)malloc(sizeof(CONNECTION_HEADER_DEFAULT));
+	response->headers[4].header_data = (char *)malloc(sizeof(CONNECTION_HEADER_DEFAULT));
 	strcpy(response->headers[4].header_data, CONNECTION_HEADER_DEFAULT);
 
-	response->headers[5].header_name = (char*)malloc(sizeof("ETag\0"));
+	response->headers[5].header_name = (char *)malloc(sizeof("ETag\0"));
 	strcpy(response->headers[5].header_name, "ETag\0");
-	response->headers[5].header_data = (char*)malloc(sizeof(ETAG_HEADER_DEFAULT));
+	response->headers[5].header_data = (char *)malloc(sizeof(ETAG_HEADER_DEFAULT));
 	strcpy(response->headers[5].header_data, ETAG_HEADER_DEFAULT);
 
-	response->headers[6].header_name = (char*)malloc(sizeof("Referrer-Policy\0"));
+	response->headers[6].header_name = (char *)malloc(sizeof("Referrer-Policy\0"));
 	strcpy(response->headers[6].header_name, "Referrer-Policy\0");
-	response->headers[6].header_data = (char*)malloc(sizeof(REFERRERPOLICY_HEADER_DEFAULT));
+	response->headers[6].header_data = (char *)malloc(sizeof(REFERRERPOLICY_HEADER_DEFAULT));
 	strcpy(response->headers[6].header_data, REFERRERPOLICY_HEADER_DEFAULT);
 
-	response->headers[7].header_name = (char*)malloc(sizeof("X-Content-Type-Options\0"));
+	response->headers[7].header_name = (char *)malloc(sizeof("X-Content-Type-Options\0"));
 	strcpy(response->headers[7].header_name, "X-Content-Type-Options\0");
-	response->headers[7].header_data = (char*)malloc(sizeof(XCONTENTTYPEOPTIONS_HEADER_DEFAULT));
+	response->headers[7].header_data = (char *)malloc(sizeof(XCONTENTTYPEOPTIONS_HEADER_DEFAULT));
 	strcpy(response->headers[7].header_data, XCONTENTTYPEOPTIONS_HEADER_DEFAULT);
 
-	response->headers[8].header_name = (char*)malloc(sizeof("Content-Encoding\0"));
+	response->headers[8].header_name = (char *)malloc(sizeof("Content-Encoding\0"));
 	strcpy(response->headers[8].header_name, "Content-Encoding\0");
-	response->headers[8].header_data = (char*)malloc(sizeof(CONTENTENCODING_HEADER_DEFAULT));
+	response->headers[8].header_data = (char *)malloc(sizeof(CONTENTENCODING_HEADER_DEFAULT));
 	strcpy(response->headers[8].header_data, CONTENTENCODING_HEADER_DEFAULT);
 
 	response->headers[9].header_name = NULL;

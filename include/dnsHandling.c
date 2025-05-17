@@ -25,7 +25,6 @@
 
 #define DNS_MAX_CONNECTION_COUNT 10
 
-
 void initializeDNSProxy()
 {
 #define DNS_OUTPUT_FILE_NAME_LENGTH 40
@@ -85,7 +84,7 @@ void initializeDNSProxy()
 	}
 }
 
-int returnUDPListeningSocket(int* destination_socket, int address_family)
+int returnUDPListeningSocket(int *destination_socket, int address_family)
 {
 	char function_name[] = "returnUDPListeningSocket";
 	int status;
@@ -171,7 +170,7 @@ int handleDNSConnection(int epoll_fd, int socket_count, FILE *output_file_ptr)
 
 			if(bytes_received == 0)
 				continue;
-			
+
 			buffer[bytes_received] = '\0';
 			char client_IP[INET6_ADDRSTRLEN];
 			if(client_addr.ss_family == AF_INET)
@@ -181,7 +180,7 @@ int handleDNSConnection(int epoll_fd, int socket_count, FILE *output_file_ptr)
 			}
 			else if(client_addr.ss_family == AF_INET6)
 			{
-				struct sockaddr_in6 *addr = (struct sockaddr_in6*)&client_addr;
+				struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&client_addr;
 				inet_ntop(client_addr.ss_family, &(addr->sin6_addr), client_IP, sizeof(client_IP));
 			}
 			else
@@ -192,11 +191,11 @@ int handleDNSConnection(int epoll_fd, int socket_count, FILE *output_file_ptr)
 
 			fprintf(stdout, "Received %ld packet from %s:\n", bytes_received, client_IP);
 			fprintf(output_file_ptr, "Received %ld packet from %s:\n", bytes_received, client_IP);
-			dump((unsigned char*)buffer, bytes_received, stdout);
-			dump((unsigned char*)buffer, bytes_received, output_file_ptr);
+			dump((unsigned char *)buffer, bytes_received, stdout);
+			dump((unsigned char *)buffer, bytes_received, output_file_ptr);
 
-			struct dns_query* dns_structure;
-			if(getDnsQuery((unsigned char*)buffer, &dns_structure) == false)
+			struct dns_query *dns_structure;
+			if(getDnsQuery((unsigned char *)buffer, &dns_structure) == false)
 				continue;
 			printDnsQuery(dns_structure, stdout);
 			printDnsQuery(dns_structure, output_file_ptr);
