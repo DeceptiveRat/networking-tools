@@ -15,8 +15,12 @@
  * along with networking-tools.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <sys/types.h>
+#include <netinet/in.h>
+
 #include "otherFunctions.h"
 #include "dnsHandling.h"
+#include "dns.h"
 
 int main(int argc, char* argv[])
 {

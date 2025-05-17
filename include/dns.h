@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <sys/types.h>
+#include <netinet/in.h>
 #include <pcap.h>
 #include <stdbool.h>
 #include <stdio.h>
