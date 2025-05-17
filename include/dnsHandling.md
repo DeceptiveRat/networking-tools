@@ -4,37 +4,44 @@
 
 ## 1. initializeDNSProxy
 ### Synopsis
-	void initializeDNSProxy()
+void initializeDNSProxy()
 
 ### Description
-	Initializes the DNS proxy
+Initializes the DNS proxy
 
 ### Return Value
+none
 
 ---
 
 ## 2. returnUDPListeningSocket
 ### Synopsis
-	int returnUDPListeningSocket(int* IPv4\_listening\_socket, int* IPv6\_listening\_socket)
+int returnUDPListeningSocket(int* IPv4\_listening\_socket, int* IPv6\_listening\_socket)
 
 ### Description
-	Returns a listening socket for each IP version.
+Returns a listening socket for each IP version.
 
-	Both sockets are:
-	(1) set to non-block
-	(2) bound to localhost on port DNS_LISTENING_PORT
+Both sockets are:
+(1) set to non-block
+(2) bound to localhost on port DNS_LISTENING_PORT
 
 ### Return Value
-	-1 on error, 0 on success.
+-1: error<br>
+0: success
 
 ---
 
 ## 3. handleDNSConnection
 ### Synopsis
+*int handleDNSConnection(int epoll_fd, int socket_count, FILE* output_file_ptr);*
 
 ### Description
+if any of the sockets in *epoll_fd* receive a dns query, dump the dns message to stdout and *output_file_ptr*
 
 ### Return Value
+
+-1: error<br>
+0: success
 
 ---
 

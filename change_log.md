@@ -506,3 +506,15 @@
 
 ### /include/httpHandling.h
 - all *function_name* type is const char
+
+# Version 6.1
+
+## summary:
+- added support for https via *httpsHandling.h*
+- updated previous compile.sh
+
+## new:
+- *../include/httpsHandling.h*
+- *Internet Simulator/httpsProxy.c*
+
+## remove:
