@@ -513,9 +513,10 @@
 - added support for https via *httpsHandling.h*
 - updated previous compile.sh
 - some functions in *httpHandling.h* have been shortened by splitting into smaller functions
+- *httpHandling.h* has been changed to accept https connections - [1]
 
-## new:
-- *../include/httpsHandling.h*
-- *Internet Simulator/httpsProxy.c*
+## details:
+### [1]
+not all functionality is available. Only *blacklistedThreadFunction* works with https connections. 
 
-## remove:
+Proper error handling should be added.

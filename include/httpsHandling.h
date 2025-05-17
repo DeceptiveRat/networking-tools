@@ -16,5 +16,3 @@ void initOpenssl();
 void cleanupOpenssl();
 SSL_CTX *createContext();
 int configureContext(SSL_CTX *ctx, char* cert_file, char* key_file);
-
-void handleHTTPSConnection();

@@ -13,3 +13,4 @@ server.key
 dnsProxy
 httpProxy
 *.dbg
+*.pem
