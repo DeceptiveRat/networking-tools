@@ -582,7 +582,7 @@ void *whitelistedThreadFunction(void *args)
 	pthread_mutex_t *mutex_write_buffer = parameters.mutex_write_buffer;
 	pthread_mutex_t *mutex_read_buffer = parameters.mutex_read_buffer;
 
-	unsigned char tempread_buffer[BUFFER_SIZE + 1];
+	unsigned char receive_buffer[BUFFER_SIZE + 1];
 	ssize_t recvResult;
 
 	// set up timeout
@@ -605,7 +605,7 @@ void *whitelistedThreadFunction(void *args)
 			pthread_exit(NULL);
 		}
 
-		recvResult = recv(socket, tempread_buffer, BUFFER_SIZE, 0);
+		recvResult = recv(socket, receive_buffer, BUFFER_SIZE, 0);
 
 		// error reading data
 		if(recvResult == -1)
@@ -632,68 +632,24 @@ void *whitelistedThreadFunction(void *args)
 		{
 			timeoutCount = 0;
 
-			if(recvResult == 0)
+			if(copyBuffer(receive_buffer, (int)recvResult, write_buffer, write_buffer_size,
+						  mutex_write_buffer, output_file_ptr, debug_file_ptr, 0, ID,
+						  connected_to) == -1)
 			{
 				*shutdown = true;
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] Terminating: 0 bytes received\n", ID, connected_to);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: 0 bytes received\n", ID,
-						connected_to);
-				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Read %zd bytes\n", ID, connected_to, recvResult);
-			fprintf(debug_file_ptr, "[%d - %s] Read %zd bytes\n", ID, connected_to, recvResult);
-			fprintf(output_file_ptr, "[%d - %s] Read %zd bytes\n", ID, connected_to, recvResult);
-			dump(tempread_buffer, recvResult, output_file_ptr);
-			pthread_mutex_unlock(&mutex_outputFile);
-
-			// wait until buffer is empty before writing to it
-			while(*write_buffer_size != 0)
-			{
-			};
-
-			// write to buffer and change buffer size
-			pthread_mutex_lock(mutex_write_buffer);
-			memcpy(write_buffer, tempread_buffer, recvResult);
-			*write_buffer_size = recvResult;
-			pthread_mutex_unlock(mutex_write_buffer);
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Wrote %zd bytes\n", ID, connected_to, recvResult);
-			fprintf(debug_file_ptr, "[%d - %s] Wrote %zd bytes\n", ID, connected_to, recvResult);
-			pthread_mutex_unlock(&mutex_outputFile);
 		}
 
 		// if there is data in the read buffer, send it
 		if(*read_buffer_size != 0)
 		{
-			if(sendString(socket, read_buffer, *read_buffer_size) == 0)
+			if(sendAndClearBuffer(socket, read_buffer, read_buffer_size, output_file_ptr,
+								  debug_file_ptr, mutex_read_buffer, ID, connected_to, 0) == -1)
 			{
-				pthread_mutex_lock(&mutex_outputFile);
 				*shutdown = true;
-				printf("[%d - %s] Terminating: error sending data\n", ID, connected_to);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: error sending data\n", ID,
-						connected_to);
-				pthread_mutex_unlock(&mutex_outputFile);
 				pthread_exit(NULL);
 			}
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Sent data\n", ID, connected_to);
-			fprintf(debug_file_ptr, "[%d - %s] Sent data\n", ID, connected_to);
-			pthread_mutex_unlock(&mutex_outputFile);
-
-			pthread_mutex_lock(mutex_read_buffer);
-			*read_buffer_size = 0;
-			pthread_mutex_unlock(mutex_read_buffer);
-
-			pthread_mutex_lock(&mutex_outputFile);
-			printf("[%d - %s] Set buffer to empty\n", ID, connected_to);
-			fprintf(debug_file_ptr, "[%d - %s] Set buffer to empty\n", ID, connected_to);
-			pthread_mutex_unlock(&mutex_outputFile);
 		}
 	}
 
@@ -704,6 +660,80 @@ void *whitelistedThreadFunction(void *args)
 	fprintf(debug_file_ptr, "[%d - %s] Terminating: shutdown variable set\n", ID, connected_to);
 	pthread_mutex_unlock(&mutex_outputFile);
 	pthread_exit(NULL);
+}
+
+int copyBuffer(unsigned char *read_buffer, int read_buffer_size, unsigned char *write_buffer,
+			   int *write_buffer_size, pthread_mutex_t *mutex_write_buffer, FILE *output_file_ptr,
+			   FILE *debug_file_ptr, int options, int connection_id, char *connected_to)
+{
+	if(read_buffer_size == 0)
+	{
+		pthread_mutex_lock(&mutex_outputFile);
+		printf("[%d - %s] Terminating: 0 bytes received\n", connection_id, connected_to);
+		fprintf(debug_file_ptr, "[%d - %s] Terminating: 0 bytes received\n", connection_id,
+				connected_to);
+		pthread_mutex_unlock(&mutex_outputFile);
+		return -1;
+	}
+
+	pthread_mutex_lock(&mutex_outputFile);
+	printf("[%d - %s] Read %d bytes\n", connection_id, connected_to, read_buffer_size);
+	fprintf(debug_file_ptr, "[%d - %s] Read %d bytes\n", connection_id, connected_to,
+			read_buffer_size);
+	fprintf(output_file_ptr, "[%d - %s] Read %d bytes\n", connection_id, connected_to,
+			read_buffer_size);
+	dump(read_buffer, read_buffer_size, output_file_ptr);
+	pthread_mutex_unlock(&mutex_outputFile);
+
+	// wait until buffer is empty before writing to it
+	while(*write_buffer_size != 0)
+	{
+	};
+
+	// write to buffer and change buffer size
+	pthread_mutex_lock(mutex_write_buffer);
+	memcpy(write_buffer, read_buffer, read_buffer_size);
+	*write_buffer_size = read_buffer_size;
+	pthread_mutex_unlock(mutex_write_buffer);
+
+	pthread_mutex_lock(&mutex_outputFile);
+	printf("[%d - %s] Wrote %d bytes\n", connection_id, connected_to, read_buffer_size);
+	fprintf(debug_file_ptr, "[%d - %s] Wrote %d bytes\n", connection_id, connected_to,
+			read_buffer_size);
+	pthread_mutex_unlock(&mutex_outputFile);
+
+	return 0;
+}
+
+int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_buffer_size,
+					   FILE *output_file_ptr, FILE *debug_file_ptr,
+					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options)
+{
+	if(sendString(socket, read_buffer, *read_buffer_size) == 0)
+	{
+		pthread_mutex_lock(&mutex_outputFile);
+		printf("[%d - %s] Terminating: error sending data\n", connection_id, connected_to);
+		fprintf(debug_file_ptr, "[%d - %s] Terminating: error sending data\n", connection_id,
+				connected_to);
+		pthread_mutex_unlock(&mutex_outputFile);
+		return -1;
+	}
+
+	pthread_mutex_lock(&mutex_outputFile);
+	printf("[%d - %s] Sent data\n", connection_id, connected_to);
+	fprintf(debug_file_ptr, "[%d - %s] Sent data\n", connection_id, connected_to);
+	pthread_mutex_unlock(&mutex_outputFile);
+
+	pthread_mutex_lock(mutex_read_buffer);
+	*read_buffer_size = 0;
+	pthread_mutex_unlock(mutex_read_buffer);
+
+	pthread_mutex_lock(&mutex_outputFile);
+	printf("[%d - %s] Set buffer to empty\n", connection_id, connected_to);
+	fprintf(debug_file_ptr, "[%d - %s] Set buffer to empty\n", connection_id, connected_to);
+	pthread_mutex_unlock(&mutex_outputFile);
+
+	return 0;
 }
 
 void *listeningThreadFunction(void *args)

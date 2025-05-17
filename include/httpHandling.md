@@ -292,4 +292,44 @@ when fatal errors occur, the thread terminates itself
 
 ---
 
+## 20. copyBuffer
+### Synopsis
+_int copyBuffer(unsigned char *read_buffer, int read_buffer_size, unsigned char *write_buffer, int *write_buffer_size, pthread_mutex_t *mutex_write_buffer, FILE *output_file_ptr, FILE *debug_file_ptr, int options, int connection_id, char *connected_to);_
+
+### Description
+writes data from read buffer to write buffer. 
+
+*write_buffer_size* is set to new size, but *read_buffer_size* is not changed. *read_buffer* is not changed as well. 
+
+options are not implemented yet
+
+### Return Value
+-1: connection was terminated
+0: success
+
+### Options
+not implemented yet
+
+---
+
+## 21. sendAndClearBuffer
+### Synopsis
+_int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_buffer_size, FILE *output_file_ptr, FILE *debug_file_ptr, pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options);_
+
+### Description
+send data in *read_buffer* via *sendString*. 
+
+*read_buffer_size* is changed to 0, but the actual contents are not changed
+
+options are not implemented yet
+
+### Return Value
+-1: error during *sendString*
+0: success
+
+### Options
+not implemented yet
+
+---
+
 # Structures
