@@ -1,11 +1,11 @@
 #!/bin/bash 
 
 COMPILEOPTION="-Wall -g"
-LINKOPTION="-lm -lz -static"
+LINKOPTION="-lm -lz"
 LIBRARIESUSED=""
 HEADERDIRECTORY="../include"
 STARTDIR=`pwd`
-while getopts "f:h:c:l:" opt; do
+while getopts "f:h:c:l:s" opt; do
     case $opt in 
         f) FILE="$OPTARG";;
         h) 
@@ -18,7 +18,6 @@ while getopts "f:h:c:l:" opt; do
                     o_file="${c_file%.c}.o"
 					set -x
                     gcc -c "$c_file" -o "$o_file" $COMPILEOPTION
-					#ar rcs lib"${c_file%.c}".a "$o_file"
 					set +x
                 else
                     echo "warning: No matching .c file for $header_file"
@@ -27,6 +26,7 @@ while getopts "f:h:c:l:" opt; do
             cd "$STARTDIR" ;;
         c) COMPILEOPTION="$OPTARG" ;;
         l) LINKOPTION="$OPTARG" ;;
+		s) LINKOPTION+=" -static" ;;
     esac    
 done
 
@@ -47,18 +47,32 @@ if [[ -z "$LIBRARIESUSED" ]]; then
 	done
 fi
 
-cd "$HEADERDIRECTORY"
-ar rcs lib"${FILE%.*}".a $LIBRARIESUSED
-cd "$STARTDIR"
+echo "compiling using libraries: "
+echo "$LIBRARIESUSED"
 
-cp "$FILE" "$FILE".bkp
-set -x
-gcc -I "$HEADERDIRECTORY" -c "$FILE" -o "${FILE%.*}".o $COMPILEOPTION
-gcc "${FILE%.*}".o -o "${FILE%.*}" -L"$HEADERDIRECTORY" -l"${FILE%.*}" $LINKOPTION
-set +x
-mv "$FILE".bkp "$FILE"
+if [[ "$LINKOPTION" == *-static* ]]; then
+	cd "$HEADERDIRECTORY"
+	ar rcs lib"${FILE%.*}".a $LIBRARIESUSED
+	cd "$STARTDIR"
 
-cd "$HEADERDIRECTORY"
-rm lib"${FILE%.*}".a
+	cp "$FILE" "$FILE".bkp
+	set -x
+	gcc -I "$HEADERDIRECTORY" -c "$FILE" -o "${FILE%.*}".o $COMPILEOPTION
+	gcc "${FILE%.*}".o -o "${FILE%.*}" -L"$HEADERDIRECTORY" -l"${FILE%.*}" $LINKOPTION
+	set +x
+	mv "$FILE".bkp "$FILE"
+
+	cd "$HEADERDIRECTORY"
+	rm lib"${FILE%.*}".a
+else
+	cp "$FILE" "$FILE".bkp
+	set -x
+	gcc -I "$HEADERDIRECTORY" -c "$FILE" -o "${FILE%.*}".o $COMPILEOPTION
+	cd "$HEADERDIRECTORY"
+	gcc "$STARTDIR"/"${FILE%.*}".o -o "$STARTDIR"/"${FILE%.*}" $LIBRARIESUSED $LINKOPTION
+	set +x
+	cd "$STARTDIR"
+	mv "$FILE".bkp "$FILE"
+fi
 
 exit
