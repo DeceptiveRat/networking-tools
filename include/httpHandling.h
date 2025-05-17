@@ -19,6 +19,8 @@
 
 #include <ctype.h>
 #include <netdb.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -27,12 +29,11 @@
 #define BUFFER_SIZE 4096
 #define HTTP_LISTENING_PORT "8080"
 #define HTTPS_LISTENING_PORT "8443"
-#define MAX_CONNECTION_COUNT 2
+#define MAX_CONNECTION_COUNT 1
 #define TIMEOUT_COUNT 20000
 #define DOMAIN_NAME_LENGTH 6
 #define DOMAIN_NAME_COUNT 7
 #define RESPONSE_HEADER_COUNT 10
-#define RESPONSE_NO_PAYLOAD 0x1
 
 struct thread_parameters
 {
@@ -41,6 +42,7 @@ struct thread_parameters
 	int connection_ID;
 	char connected_to[NAME_LENGTH];
 	bool *shutdown;
+	bool *is_HTTPS;
 
 	// read/write buffer info
 	int *write_buffer_size;
@@ -134,15 +136,23 @@ void setupListeningFunctions(int *accepted_socket, bool *shutdown_listening_sock
 
 // action function
 void handleHTTPConnection();
+#define RESPONSE_NO_PAYLOAD 0x1
+#define RESPONSE_HTTPS 0x2
 int sendResponse(int socket, const int options, const char *file_type, char *write_buffer,
-				 const struct HTTP_response *response, FILE *output_file_ptr);
+				 const struct HTTP_response *response, FILE *output_file_ptr, SSL *ssl);
 int responseToString(const struct HTTP_response *response, char *buffer);
 int copyBuffer(unsigned char *read_buffer, int read_buffer_size, unsigned char *write_buffer,
 			   int *write_buffer_size, pthread_mutex_t *mutex_write_buffer, FILE *output_file_ptr,
 			   FILE *debug_file_ptr, int options, int connection_id, char *connected_to);
 int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_buffer_size,
 					   FILE *output_file_ptr, FILE *debug_file_ptr,
-					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options);
+					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to,
+					   int options);
+int receiveData(int socket, unsigned char *buffer, int buffer_size, int flags);
+int parseAndRespond(const unsigned char *http_data, unsigned char *buffer, int socket,
+					struct HTTP_response *http_response, int connection_id, int packet_count,
+					FILE *output_file_ptr, FILE *debug_file_ptr, int sendResponse_options,
+					SSL *ssl);
 
 // return sockets
 #define HTTP_LISTENER 0x1

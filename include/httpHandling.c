@@ -73,6 +73,7 @@ void setupConnectionResources(struct connection_resources *connections, int conn
 			fatal("opening file", "setupConnectionResources", stdout);
 
 		connections[i].shutdown = false;
+		connections[i].is_HTTPS = false;
 		connections[i].output_file_ptr = output_file_ptr;
 
 		// set up server arguments
@@ -81,6 +82,7 @@ void setupConnectionResources(struct connection_resources *connections, int conn
 		connections[i].server_arguments.connection_ID = i;
 		memcpy(connections[i].server_arguments.connected_to, "server\0", NAME_LENGTH);
 		connections[i].server_arguments.shutdown = &connections[i].shutdown;
+		connections[i].server_arguments.is_HTTPS = &connections[i].is_HTTPS;
 		// read/write buffer info
 		connections[i].server_arguments.write_buffer_size = &connections[i].data_from_server_size;
 		connections[i].server_arguments.read_buffer_size = &connections[i].data_from_client_size;
@@ -99,6 +101,7 @@ void setupConnectionResources(struct connection_resources *connections, int conn
 		connections[i].client_arguments.connection_ID = i;
 		memcpy(connections[i].client_arguments.connected_to, "client\0", NAME_LENGTH);
 		connections[i].client_arguments.shutdown = &connections[i].shutdown;
+		connections[i].client_arguments.is_HTTPS = &connections[i].is_HTTPS;
 		// read/write buffer info
 		connections[i].client_arguments.write_buffer_size = &connections[i].data_from_client_size;
 		connections[i].client_arguments.read_buffer_size = &connections[i].data_from_server_size;
@@ -275,7 +278,7 @@ void handleHTTPConnection()
 	// initialize https configuration
 	initOpenssl();
 	default_context = createContext();
-	configureContext(default_context, NULL, NULL);
+	configureContext(default_context, "localhost.pem", "localhost-key.pem");
 
 	// create listening thread
 	pthread_t httpListeningThread;
@@ -305,23 +308,32 @@ void handleHTTPConnection()
 			pthread_mutex_unlock(&mutex_accepted_socket);
 			temp->data_from_client[0] = '\0';
 			temp->data_from_server[0] = '\0';
-			int receiveLength = recv(temp->client_socket, temp->data_from_client, BUFFER_SIZE, 0);
-
-			if(receiveLength == -1)
+			if(accepted_socket_HTTPS)
 			{
-				if(errno == EAGAIN || errno == EWOULDBLOCK)
-				{
-					pthread_mutex_lock(&mutex_outputFile);
-					printf("[   main   ] lost connection with %d:\n", connectionCount);
-					fprintf(output_file_ptr, "[   main   ] lost connection with %d:\n",
-							connectionCount);
-					printf("[   main   ] resetting connection...\n");
-					fprintf(output_file_ptr, "[   main   ] resetting connection...\n");
-					pthread_mutex_unlock(&mutex_outputFile);
-					close(temp->client_socket);
-					continue;
-				}
-
+				temp->server_socket = 0;
+				temp->is_HTTPS = true;
+				threadFunction = &blacklistedThreadFunction;
+				pthread_create(&connections[connectionCount].clientThread, NULL, threadFunction,
+							   &connections[connectionCount].client_arguments);
+				connectionCount++;
+				continue;
+			}
+			int receiveLength =
+				receiveData(temp->client_socket, temp->data_from_client, BUFFER_SIZE, 0);
+			if(receiveLength == -2)
+			{
+				pthread_mutex_lock(&mutex_outputFile);
+				printf("[   main   ] lost connection with %d:\n", connectionCount);
+				fprintf(output_file_ptr, "[   main   ] lost connection with %d:\n",
+						connectionCount);
+				printf("[   main   ] resetting connection...\n");
+				fprintf(output_file_ptr, "[   main   ] resetting connection...\n");
+				pthread_mutex_unlock(&mutex_outputFile);
+				close(temp->client_socket);
+				continue;
+			}
+			else if(receiveLength == -1)
+			{
 				// clean up code
 				for(int i = 0; i < MAX_CONNECTION_COUNT; i++)
 					connections[i].shutdown = true;
@@ -405,6 +417,20 @@ void handleHTTPConnection()
 	fclose(output_file_ptr);
 	cleanMutexes(mutexes, MAX_CONNECTION_COUNT * 2);
 	pthread_mutex_destroy(&mutex_outputFile);
+}
+
+int receiveData(int socket, unsigned char *buffer, int buffer_size, int flags)
+{
+	int receiveLength = recv(socket, buffer, buffer_size, flags);
+	if(receiveLength == -1)
+	{
+		if(errno == EAGAIN || errno == EWOULDBLOCK)
+			return -2;
+		else
+			return -1;
+	}
+
+	return 0;
 }
 
 bool isWhitelisted(const struct whitelist_structure whitelist, const char *destination_name,
@@ -653,28 +679,22 @@ void *whitelistedThreadFunction(void *args)
 			pthread_exit(NULL);
 		}
 
-		recvResult = recv(socket, receive_buffer, BUFFER_SIZE, 0);
+		recvResult = receiveData(socket, receive_buffer, BUFFER_SIZE, 0);
 
 		// error reading data
-		if(recvResult == -1)
+		if(recvResult == -2)
+			timeoutCount++;
+		else if(recvResult == -1)
 		{
-			if(errno != EAGAIN && errno != EWOULDBLOCK)
-			{
-				*shutdown = true;
-				pthread_mutex_lock(&mutex_outputFile);
-				printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connected_to,
-					   errno);
-				fprintf(debug_file_ptr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n",
-						ID, connected_to, errno);
-				pthread_mutex_unlock(&mutex_outputFile);
-				pthread_exit(NULL);
-			}
-
-			// no data to read
-			else
-				timeoutCount++;
+			*shutdown = true;
+			pthread_mutex_lock(&mutex_outputFile);
+			printf("[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID, connected_to,
+				   errno);
+			fprintf(debug_file_ptr, "[%d - %s] Terminating: Error reading data.\nErrno: %d\n", ID,
+					connected_to, errno);
+			pthread_mutex_unlock(&mutex_outputFile);
+			pthread_exit(NULL);
 		}
-
 		// data read
 		else
 		{
@@ -909,7 +929,7 @@ int responseToString(const struct HTTP_response *response, char *buffer)
 }
 
 int sendResponse(int socket, const int options, const char *fileType, char *write_buffer,
-				 const struct HTTP_response *response, FILE *output_file_ptr)
+				 const struct HTTP_response *response, FILE *output_file_ptr, SSL *ssl)
 {
 #define FILE_READ_BUFFER_SIZE 100
 	responseToString(response, write_buffer);
@@ -938,15 +958,16 @@ int sendResponse(int socket, const int options, const char *fileType, char *writ
 
 	fprintf(output_file_ptr, "Send response with size %d:\n", write_buffer_size);
 	dump((unsigned char *)write_buffer, write_buffer_size, output_file_ptr);
-	write(socket, write_buffer, write_buffer_size);
+	if((options & RESPONSE_HTTPS) != 0)
+		SSL_write(ssl, write_buffer, write_buffer_size);
+	else
+		write(socket, write_buffer, write_buffer_size);
 	fclose(inputFile);
 	return 0;
 }
 
 void *blacklistedThreadFunction(void *args)
 {
-#define REQUESTED_OBJECT_NAME_LENGTH 30
-#define REQUESTED_OBJECT_TYPE_LENGTH 7
 	// set up local variables with argument
 	struct thread_parameters parameters = *(struct thread_parameters *)args;
 	const int socket = *parameters.socket;
@@ -955,6 +976,7 @@ void *blacklistedThreadFunction(void *args)
 		pthread_exit(NULL);
 	const int ID = parameters.connection_ID;
 	bool *shutdown = parameters.shutdown;
+	bool is_HTTPS = *parameters.is_HTTPS;
 	// read/write buffer info
 	unsigned char *data_from_client = parameters.write_buffer;
 	unsigned char *dataToClient = parameters.read_buffer;
@@ -964,72 +986,38 @@ void *blacklistedThreadFunction(void *args)
 
 	// local variables
 	ssize_t recvResult;
-	int requestType = 0;
-	char requestedObject[REQUESTED_OBJECT_NAME_LENGTH];
-	char requestedObjectType[REQUESTED_OBJECT_TYPE_LENGTH];
 	static struct HTTP_response *defaultResponse = NULL;
 	if(defaultResponse == NULL)
 		setupResponse(&defaultResponse, 0);
 	int packetCount = 0;
+	SSL *ssl;
+	if(is_HTTPS)
+	{
+		ssl = SSL_new(default_context);
+		SSL_set_fd(ssl, socket);
+		if(SSL_accept(ssl) <= 0)
+		{
+			ERR_print_errors_fp(stderr);
+			*shutdown = true;
+		}
+	}
+	else // if not https, thread starts with data in buffer
+	{
+		parseAndRespond(data_from_client, dataToClient, socket, defaultResponse, ID, packetCount,
+						output_file_ptr, debug_file_ptr, 0, NULL);
+	}
 
 	while(!(*shutdown))
 	{
-		requestType = getHTTPRequestType((char *)data_from_client);
-		if(requestType == 0)
+		if(is_HTTPS)
 		{
-			fprintf(stdout, "[%d #%d] Packet not HTTP. Packet ignored.\n", ID, packetCount);
-			fprintf(debug_file_ptr, "[%d #%d] Packet not HTTP. Packet ignored.\n", ID, packetCount);
-			break;
+			recvResult = SSL_read(ssl, data_from_client, BUFFER_SIZE);
+			if(recvResult == 0)
+				recvResult = -1;
 		}
+		else
+			recvResult = recv(socket, data_from_client, BUFFER_SIZE, 0);
 
-		getRequestedObject(data_from_client, requestedObject);
-		strcpy(requestedObjectType, strstr(requestedObject, ".") + 1);
-
-		switch(requestType)
-		{
-			case 1:
-				int result;
-				result = sendResponse(socket, 0, requestedObjectType, (char *)dataToClient,
-									  defaultResponse, output_file_ptr);
-				if(result == -1)
-				{
-					fprintf(stdout, "[%d #%d] Unknown file type. Request ignored.\n", ID,
-							packetCount);
-					fprintf(debug_file_ptr, "[%d #%d] Unknown file type. Request ignored.\n", ID,
-							packetCount);
-					break;
-				}
-				else if(result == -2)
-				{
-					fprintf(stdout, "[%d #%d] Error opening file\n", ID, packetCount);
-					fprintf(debug_file_ptr, "[%d #%d] Error opening file\n", ID, packetCount);
-					break;
-				}
-				else
-				{
-					fprintf(stdout, "[%d #%d] Successfully sent response\n", ID, packetCount);
-					fprintf(debug_file_ptr, "[%d #%d] Successfully sent response\n", ID,
-							packetCount);
-					break;
-				}
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			case 4:
-				break;
-			case 5:
-				break;
-			case 6:
-				break;
-			case 7:
-				break;
-			default:
-				break;
-		}
-
-		recvResult = recv(socket, data_from_client, BUFFER_SIZE, 0);
 		if(recvResult == -1)
 		{
 			fprintf(stdout, "[%d #%d] Error reading from socket\n", ID, packetCount);
@@ -1043,6 +1031,17 @@ void *blacklistedThreadFunction(void *args)
 				recvResult);
 		packetCount++;
 		dump(data_from_client, recvResult, output_file_ptr);
+
+		if(is_HTTPS)
+		{
+			parseAndRespond(data_from_client, dataToClient, socket, defaultResponse, ID,
+							packetCount, output_file_ptr, debug_file_ptr, RESPONSE_HTTPS, ssl);
+		}
+		else
+		{
+			parseAndRespond(data_from_client, dataToClient, socket, defaultResponse, ID,
+							packetCount, output_file_ptr, debug_file_ptr, 0, NULL);
+		}
 	}
 
 	// clean up code
@@ -1053,6 +1052,75 @@ void *blacklistedThreadFunction(void *args)
 	pthread_mutex_unlock(&mutex_outputFile);
 	free(defaultResponse);
 	pthread_exit(NULL);
+}
+
+int parseAndRespond(const unsigned char *http_data, unsigned char *buffer, int socket,
+					struct HTTP_response *http_response, int connection_id, int packet_count,
+					FILE *output_file_ptr, FILE *debug_file_ptr, int sendResponse_options, SSL *ssl)
+{
+#define REQUESTED_OBJECT_NAME_LENGTH 30
+#define REQUESTED_OBJECT_TYPE_LENGTH 7
+	char requestedObject[REQUESTED_OBJECT_NAME_LENGTH];
+	char requestedObjectType[REQUESTED_OBJECT_TYPE_LENGTH];
+	int requestType = getHTTPRequestType((char *)http_data);
+	if(requestType == 0)
+	{
+		fprintf(stdout, "[%d #%d] Packet not HTTP. Packet ignored.\n", connection_id, packet_count);
+		fprintf(debug_file_ptr, "[%d #%d] Packet not HTTP. Packet ignored.\n", connection_id,
+				packet_count);
+		return -4;
+	}
+
+	getRequestedObject(http_data, requestedObject);
+	strcpy(requestedObjectType, strstr(requestedObject, ".") + 1);
+
+	switch(requestType)
+	{
+		case 1:
+			int result;
+			result = sendResponse(socket, sendResponse_options, requestedObjectType, (char *)buffer,
+								  http_response, output_file_ptr, ssl);
+			if(result == -1)
+			{
+				fprintf(stdout, "[%d #%d] Unknown file type. Request ignored.\n", connection_id,
+						packet_count);
+				fprintf(debug_file_ptr, "[%d #%d] Unknown file type. Request ignored.\n",
+						connection_id, packet_count);
+				return result;
+			}
+			else if(result == -2)
+			{
+				fprintf(stdout, "[%d #%d] Error opening file\n", connection_id, packet_count);
+				fprintf(debug_file_ptr, "[%d #%d] Error opening file\n", connection_id,
+						packet_count);
+				return result;
+			}
+			else
+			{
+				fprintf(stdout, "[%d #%d] Successfully sent response\n", connection_id,
+						packet_count);
+				fprintf(debug_file_ptr, "[%d #%d] Successfully sent response\n", connection_id,
+						packet_count);
+				return 0;
+			}
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		case 6:
+			break;
+		case 7:
+			break;
+		default:
+			break;
+	}
+
+	return -3;
 }
 
 int getHTTPRequestType(const char *receivedData)
