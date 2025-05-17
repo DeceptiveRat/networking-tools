@@ -127,7 +127,13 @@ void setupResponse(struct HTTP_response **destination, int options);
 void handleHTTPConnection();
 int sendResponse(int socket, const int options, const char *file_type, char *write_buffer,
 				 const struct HTTP_response *response, FILE *output_file_ptr);
-int responseToString(const struct HTTP_response *response, char* buffer);
+int responseToString(const struct HTTP_response *response, char *buffer);
+int copyBuffer(unsigned char *read_buffer, int read_buffer_size, unsigned char *write_buffer,
+			   int *write_buffer_size, pthread_mutex_t *mutex_write_buffer, FILE *output_file_ptr,
+			   FILE *debug_file_ptr, int options, int connection_id, char *connected_to);
+int sendAndClearBuffer(int socket, const unsigned char *read_buffer, int *read_buffer_size,
+					   FILE *output_file_ptr, FILE *debug_file_ptr,
+					   pthread_mutex_t *mutex_read_buffer, int connection_id, char *connected_to, int options);
 
 // return sockets
 int returnListeningSocket();

@@ -512,6 +512,7 @@
 ## summary:
 - added support for https via *httpsHandling.h*
 - updated previous compile.sh
+- some functions in *httpHandling.h* have been shortened by splitting into smaller functions
 
 ## new:
 - *../include/httpsHandling.h*
