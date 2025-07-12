@@ -514,6 +514,7 @@
 - updated previous compile.sh
 - some functions in *httpHandling.h* have been shortened by splitting into smaller functions
 - *httpHandling.h* has been changed to accept https connections - [1]
+- *dnsHandling.h* has been changed so only dns packets are printed 
 
 ## details:
 ### [1]

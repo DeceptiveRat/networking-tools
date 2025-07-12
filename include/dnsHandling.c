@@ -191,12 +191,16 @@ int handleDNSConnection(int epoll_fd, int socket_count, FILE *output_file_ptr)
 
 			fprintf(stdout, "Received %ld packet from %s:\n", bytes_received, client_IP);
 			fprintf(output_file_ptr, "Received %ld packet from %s:\n", bytes_received, client_IP);
-			dump((unsigned char *)buffer, bytes_received, stdout);
-			dump((unsigned char *)buffer, bytes_received, output_file_ptr);
 
 			struct dns_query *dns_structure;
 			if(getDnsQuery((unsigned char *)buffer, &dns_structure) == false)
+			{
+				printf("Skipping non-DNS packet...\n");
 				continue;
+			}
+
+			dump((unsigned char *)buffer, bytes_received, stdout);
+			dump((unsigned char *)buffer, bytes_received, output_file_ptr);
 			printDnsQuery(dns_structure, stdout);
 			printDnsQuery(dns_structure, output_file_ptr);
 			freeDnsQuery(dns_structure);
