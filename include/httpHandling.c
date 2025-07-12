@@ -1013,7 +1013,10 @@ void *blacklistedThreadFunction(void *args)
 		{
 			recvResult = SSL_read(ssl, data_from_client, BUFFER_SIZE);
 			if(recvResult == 0)
+			{
+				printf("%d\n", SSL_get_error(ssl, recvResult));
 				recvResult = -1;
+			}
 		}
 		else
 			recvResult = recv(socket, data_from_client, BUFFER_SIZE, 0);
